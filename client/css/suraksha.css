@@ -1,0 +1,106 @@
+/* =====================================
+   VED AI — SURAKSHA MODE (Scam Shield UI)
+   Founder: Sayali P. R. Pawar
+===================================== */
+
+#surakshaBtn {
+    position: fixed;
+    right: 18px;
+    bottom: 110px;
+    z-index: 900;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.25);
+    background: linear-gradient(135deg, #6C6CF0, #4a4ad0);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(108,108,240,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .2s ease;
+}
+
+#surakshaBtn:hover { transform: scale(1.08); }
+
+#surakshaPanel {
+    position: fixed;
+    right: 18px;
+    bottom: 180px;
+    z-index: 900;
+    width: 340px;
+    max-width: calc(100vw - 36px);
+    max-height: 70vh;
+    overflow-y: auto;
+    background: rgba(17,17,19,.96);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px;
+    padding: 18px;
+    display: none;
+    box-shadow: 0 12px 40px rgba(0,0,0,.6);
+}
+
+#surakshaPanel.open { display: block; animation: surakshaPop .25s ease; }
+
+@keyframes surakshaPop {
+    from { opacity: 0; transform: translateY(14px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.suraksha-title { color: #fff; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.suraksha-sub { color: #8A8A93; font-size: 12.5px; margin-bottom: 12px; }
+
+#surakshaInput {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    font-size: 13.5px;
+    outline: none;
+}
+
+#surakshaInput:focus { border-color: #6C6CF0; }
+
+#surakshaCheckBtn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 11px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6C6CF0, #4a4ad0);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#surakshaCheckBtn:disabled { opacity: .6; cursor: wait; }
+
+#surakshaResult { margin-top: 12px; display: none; }
+
+.verdict-card { border-radius: 14px; padding: 14px; color: #fff; }
+
+.verdict-card.scam {
+    background: linear-gradient(135deg, rgba(229,72,77,.9), rgba(160,30,35,.9));
+    border: 1px solid rgba(255,120,120,.5);
+}
+.verdict-card.suspicious {
+    background: linear-gradient(135deg, rgba(255,150,40,.85), rgba(200,100,10,.9));
+    border: 1px solid rgba(255,190,110,.5);
+}
+.verdict-card.safe {
+    background: linear-gradient(135deg, rgba(40,180,99,.85), rgba(20,120,70,.9));
+    border: 1px solid rgba(120,255,170,.5);
+}
+
+.verdict-head { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.verdict-hindi { font-size: 13.5px; line-height: 1.5; margin-bottom: 6px; }
+.verdict-action { font-size: 12.5px; font-weight: 600; }
+.verdict-score { margin-top: 8px; font-size: 11px; opacity: .8; }

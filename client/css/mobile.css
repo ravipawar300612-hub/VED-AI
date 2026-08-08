@@ -1,0 +1,64 @@
+/* =====================================
+   VED AI — MOBILE EXPERIENCE
+   Founder: Sayali P. R. Pawar
+===================================== */
+
+#mobileMenuBtn { display: none; }
+#mobileBackdrop { display: none; }
+
+@media (max-width: 700px) {
+
+    /* Sidebar ab slide-in drawer banega */
+    .sidebar {
+        display: flex !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 280px !important;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 250ms ease;
+    }
+
+    .sidebar.mobile-open {
+        transform: translateX(0);
+        box-shadow: 0 0 40px rgba(0, 0, 0, .6);
+    }
+
+    /* Peeche ka dark backdrop */
+    #mobileBackdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .5);
+        z-index: 999;
+    }
+    #mobileBackdrop.show { display: block; }
+
+    /* Hamburger button */
+    #mobileMenuBtn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 998;
+        width: 42px;
+        height: 42px;
+        border: 1px solid rgba(255, 255, 255, .2);
+        border-radius: 12px;
+        background: rgba(17, 17, 19, .85);
+        backdrop-filter: blur(10px);
+        color: #ECECEE;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    /* Content button ke neeche se shuru ho */
+    .container { padding-top: 70px; }
+    h1 { font-size: 28px; }
+
+    .icon-btn { width: 40px; height: 40px; }
+}

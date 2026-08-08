@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>VED AI — Sign In</title>
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/auth.css">
+
+</head>
+
+<body class="auth-page">
+
+<div class="auth-shell">
+
+    <div class="auth-brand">
+
+        <div class="auth-orbs" aria-hidden="true">
+            <span class="orb orb-a"></span>
+            <span class="orb orb-b"></span>
+            <span class="orb orb-c"></span>
+        </div>
+
+        <div class="auth-dotgrid" aria-hidden="true"></div>
+
+        <div class="brand-content">
+
+            <div class="brand-mark">
+                <img src="logo.png" alt="" class="brand-logo">
+                <span class="brand-wordmark">VED</span>
+            </div>
+
+            <p class="brand-tagline">Your intelligent AI companion.<br>Calm, capable, always ready.</p>
+
+        </div>
+
+        <div class="brand-footer">Sayali P. R. Pawar</div>
+
+    </div>
+
+    <div class="auth-panel">
+
+        <div class="auth-card-wrap">
+
+            <form class="auth-card" data-view="login" novalidate>
+
+                <div class="auth-card-header">
+                    <h1>Welcome back</h1>
+                    <p>Sign in to continue to VED AI</p>
+                </div>
+
+                <div class="auth-error-banner" role="alert" hidden></div>
+
+                <div class="auth-field">
+                    <label for="loginEmail">Email</label>
+                    <div class="auth-input-wrap">
+                        <input type="email" id="loginEmail" class="auth-input" autocomplete="email" placeholder="you@example.com">
+                    </div>
+                    <span class="field-error"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label for="loginPassword">Password</label>
+                    <div class="auth-input-wrap">
+                        <input type="password" id="loginPassword" class="auth-input" autocomplete="current-password" placeholder="Enter your password">
+                        <button type="button" class="password-toggle-btn" aria-label="Show password">
+                            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.5 5.2A10.6 10.6 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.1 3.9M6.2 6.6C3.4 8.4 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.6-.6"/></svg>
+                        </button>
+                    </div>
+                    <span class="caps-warning" hidden>Caps Lock is on</span>
+                    <span class="field-error"></span>
+                </div>
+
+                <div class="auth-row-between">
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="rememberMe">
+                        <span class="checkbox-custom"></span>
+                        Remember me
+                    </label>
+                    <a href="#forgot" class="link-muted">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-label">Sign in</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+
+                <div class="auth-divider"><span>or continue with</span></div>
+
+                <div class="oauth-row">
+                    <button type="button" class="oauth-btn">
+                        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.2s2.7-6.2 6-6.2c1.9 0 3.1.8 3.9 1.5l2.6-2.5C16.9 3.2 14.7 2.2 12 2.2 6.9 2.2 2.8 6.4 2.8 12S6.9 21.8 12 21.8c6.9 0 8.9-4.9 8.9-7.4 0-.5 0-.9-.1-1.3H12Z"/></svg>
+                        Continue with Google
+                    </button>
+                    <button type="button" class="oauth-btn">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.2-4.6-1.1-4.6-4.9 0-1.1.4-2 1-2.6-.1-.2-.4-1.2.1-2.6 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.6.6.6 1 1.5 1 2.6 0 3.8-2.4 4.7-4.6 4.9.3.3.6.9.6 1.8v2.6c0 .3.2.6.7.5 3.9-1.3 6.8-5.1 6.8-9.6C22 6.6 17.5 2 12 2Z"/></svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <p class="auth-switch-text">Don't have an account? <a href="#register">Create one</a></p>
+
+            </form>
+
+            <form class="auth-card" data-view="register" novalidate hidden>
+
+                <div class="auth-card-header">
+                    <h1>Create your account</h1>
+                    <p>Set up VED AI in under a minute</p>
+                </div>
+
+                <div class="auth-error-banner" role="alert" hidden></div>
+
+                <div class="auth-field">
+                    <label for="regName">Full name</label>
+                    <div class="auth-input-wrap">
+                        <input type="text" id="regName" class="auth-input" autocomplete="name" placeholder="Your name">
+                    </div>
+                    <span class="field-error"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label for="regEmail">Email</label>
+                    <div class="auth-input-wrap">
+                        <input type="email" id="regEmail" class="auth-input" autocomplete="email" placeholder="you@example.com">
+                    </div>
+                    <span class="field-error"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label for="regPassword">Password</label>
+                    <div class="auth-input-wrap">
+                        <input type="password" id="regPassword" class="auth-input" autocomplete="new-password" placeholder="Create a password">
+                        <button type="button" class="password-toggle-btn" aria-label="Show password">
+                            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.5 5.2A10.6 10.6 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.1 3.9M6.2 6.6C3.4 8.4 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.6-.6"/></svg>
+                        </button>
+                    </div>
+                    <span class="caps-warning" hidden>Caps Lock is on</span>
+                    <span class="field-error"></span>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-label">Create account</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+
+                <div class="auth-divider"><span>or continue with</span></div>
+
+                <div class="oauth-row">
+                    <button type="button" class="oauth-btn">
+                        <svg viewBox="0 0 24 24" width="17" height="17"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.2s2.7-6.2 6-6.2c1.9 0 3.1.8 3.9 1.5l2.6-2.5C16.9 3.2 14.7 2.2 12 2.2 6.9 2.2 2.8 6.4 2.8 12S6.9 21.8 12 21.8c6.9 0 8.9-4.9 8.9-7.4 0-.5 0-.9-.1-1.3H12Z"/></svg>
+                        Continue with Google
+                    </button>
+                    <button type="button" class="oauth-btn">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.2-4.6-1.1-4.6-4.9 0-1.1.4-2 1-2.6-.1-.2-.4-1.2.1-2.6 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.6.6.6 1 1.5 1 2.6 0 3.8-2.4 4.7-4.6 4.9.3.3.6.9.6 1.8v2.6c0 .3.2.6.7.5 3.9-1.3 6.8-5.1 6.8-9.6C22 6.6 17.5 2 12 2Z"/></svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <p class="auth-switch-text">Already have an account? <a href="#login">Sign in</a></p>
+
+            </form>
+
+            <form class="auth-card" data-view="forgot" novalidate hidden>
+
+                <a href="#login" class="back-link">&#8592; Back to sign in</a>
+
+                <div class="auth-card-header">
+                    <h1>Reset your password</h1>
+                    <p>We'll send a verification code to your email</p>
+                </div>
+
+                <div class="auth-error-banner" role="alert" hidden></div>
+
+                <div class="auth-field">
+                    <label for="forgotEmail">Email</label>
+                    <div class="auth-input-wrap">
+                        <input type="email" id="forgotEmail" class="auth-input" autocomplete="email" placeholder="you@example.com">
+                    </div>
+                    <span class="field-error"></span>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-label">Send code</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+
+            </form>
+
+            <form class="auth-card" data-view="otp" novalidate hidden>
+
+                <a href="#forgot" class="back-link">&#8592; Back</a>
+
+                <div class="auth-card-header">
+                    <h1>Check your inbox</h1>
+                    <p>Enter the 6-digit code we sent you</p>
+                </div>
+
+                <div class="auth-error-banner" role="alert" hidden></div>
+
+                <div class="otp-inputs">
+                    <input type="text" inputmode="numeric" maxlength="1" class="otp-box">
+                    <input type="text" inputmode="numeric" maxlength="1" class="otp-box">
+                    <input type="text" inputmode="numeric" maxlength="1" class="otp-box">
+                    <input type="text" inputmode="numeric" maxlength="1" class="otp-box">
+                    <input type="text" inputmode="numeric" maxlength="1" class="otp-box">
+                    <input type="text" inputmode="numeric" maxlength="1" class="otp-box">
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-label">Verify code</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+
+                <p class="auth-switch-text">Didn't get a code? <a href="#" class="resend-link">Resend</a></p>
+
+            </form>
+
+            <form class="auth-card" data-view="reset" novalidate hidden>
+
+                <div class="auth-card-header">
+                    <h1>Set a new password</h1>
+                    <p>Make it something you'll remember</p>
+                </div>
+
+                <div class="auth-error-banner" role="alert" hidden></div>
+
+                <div class="auth-field">
+                    <label for="newPassword">New password</label>
+                    <div class="auth-input-wrap">
+                        <input type="password" id="newPassword" class="auth-input" autocomplete="new-password" placeholder="Enter a new password">
+                        <button type="button" class="password-toggle-btn" aria-label="Show password">
+                            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.5 5.2A10.6 10.6 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.1 3.9M6.2 6.6C3.4 8.4 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.6-.6"/></svg>
+                        </button>
+                    </div>
+                    <span class="caps-warning" hidden>Caps Lock is on</span>
+                    <span class="field-error"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label for="confirmPassword">Confirm password</label>
+                    <div class="auth-input-wrap">
+                        <input type="password" id="confirmPassword" class="auth-input" autocomplete="new-password" placeholder="Re-enter your password">
+                    </div>
+                    <span class="field-error"></span>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-label">Update password</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+
+            </form>
+
+            <div class="auth-success" hidden>
+                <div class="success-check">
+                    <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-15"/></svg>
+                </div>
+                <p class="success-title">You're in</p>
+                <p class="success-sub">Redirecting to VED AI...</p>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="js/auth.js"></script>
+
+</body>
+
+</html>

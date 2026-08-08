@@ -1,0 +1,160 @@
+/* ==========================
+   VED AI LOADING SCREEN (OVERLAY MODE)
+========================== */
+
+/* Global resets REMOVED to protect chat page styles */
+
+/* ==========================
+   LOADING SCREEN
+========================== */
+#loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #090909;
+    overflow: hidden;
+    z-index: 9999; /* Sits on top of EVERYTHING */
+}
+
+/* ==========================
+   PARTICLES
+========================== */
+#particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(circle, #5EA8FF22 1px, transparent 1px);
+    background-size: 90px 90px;
+    opacity: .35;
+    animation: moveParticles 35s linear infinite;
+    filter: blur(.4px);
+}
+
+/* ==========================
+   CENTER
+========================== */
+.center-content {
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ==========================
+   LOGO
+========================== */
+#logo {
+    font-size: 72px;
+    font-weight: 700;
+    letter-spacing: 10px;
+    color: white;
+    text-shadow: 0 0 10px rgba(94, 168, 255, .2);
+}
+
+#logo-text {
+    opacity: 0;
+    transform: scale(.8);
+    transition: .5s ease;
+}
+
+.show {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}
+
+/* ==========================
+   FOUNDER
+========================== */
+#founder {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 17px;
+    line-height: 30px;
+    color: #8f8f8f;
+    opacity: 0;
+    transition: 1s;
+}
+
+#founder span {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+}
+
+/* ==========================
+   STATUS
+========================== */
+#status-text {
+    margin-top: 70px;
+    font-size: 18px;
+    color: #5EA8FF;
+    letter-spacing: 1px;
+    height: 30px;
+    opacity: .9;
+    transition: opacity 0.25s ease;
+}
+
+/* ==========================
+   PROGRESS
+========================== */
+.progress-container {
+    margin-top: 28px;
+    width: 320px;
+    height: 4px;
+    background: #222;
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+#progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #5EA8FF, #8BC8FF);
+    box-shadow: 0 0 12px #5EA8FF;
+    animation: loading 6s linear forwards;
+}
+
+/* ==========================
+   QUOTE
+========================== */
+#quote {
+    margin-top: 50px;
+    font-size: 18px;
+    font-style: italic;
+    color: #cfcfcf;
+    opacity: 0;
+    transition: 1s;
+    text-align: center;
+}
+
+/* ==========================
+   ANIMATIONS
+========================== */
+@keyframes loading {
+    0% { width: 0%; }
+    100% { width: 100%; }
+}
+
+@keyframes moveParticles {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-120px); }
+}
+
+/* ==========================
+   FADE OUT
+========================== */
+.fadeOut {
+    animation: fadeOut 1.2s forwards;
+}
+
+@keyframes fadeOut {
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
+}

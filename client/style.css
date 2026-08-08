@@ -1,0 +1,602 @@
+/* =====================================
+   VED AI CSS v7.0
+   Founder : Sayali P. R. Pawar
+===================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
+}
+
+body{
+
+    margin:0;
+
+    width:100%;
+    height:100vh;
+
+    overflow:hidden;
+
+    background:
+    linear-gradient(rgba(0,20,35,.35),rgba(0,20,35,.35)),
+    url("bg.jpg");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+
+}
+
+.app{
+
+    width:100%;
+    height:100vh;
+
+    display:flex;
+
+}
+/* ==========================
+        MAIN
+========================== */
+
+.main{
+
+    flex:1;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.container{
+
+    width:100%;
+    height:100vh;
+
+    display:flex;
+    flex-direction:column;
+
+    padding:30px;
+
+}
+
+/* ==========================
+        HEADINGS
+========================== */
+
+h1{
+
+    color:white;
+
+    font-size:46px;
+
+    font-weight:600;
+
+    letter-spacing:-0.01em;
+
+    margin-bottom:10px;
+
+}
+
+.tagline{
+
+    color:rgba(255,255,255,.92);
+
+    font-size:17px;
+
+    font-weight:400;
+
+}
+
+.subtitle{
+
+    color:rgba(255,255,255,.7);
+
+    font-size:14px;
+
+    margin-bottom:20px;
+
+}
+
+/* ==========================
+        CHAT BOX
+========================== */
+
+.chat-box{
+
+    flex:1;
+
+    width:100%;
+
+    padding:20px;
+
+    overflow-y:auto;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:12px;
+
+    background:rgba(255,255,255,.10);
+
+    backdrop-filter:blur(18px);
+
+    border-radius:20px;
+
+    border:1px solid rgba(255,255,255,.16);
+
+}
+/* ==========================
+        MESSAGES
+========================== */
+
+.bot-message{
+
+    align-self:flex-start;
+
+    max-width:75%;
+
+    padding:14px 18px;
+
+    background:rgba(255,255,255,.14);
+
+    color:white;
+
+    font-size:14.5px;
+
+    line-height:1.5;
+
+    border-radius:16px 16px 16px 4px;
+
+    border:1px solid rgba(255,255,255,.18);
+
+    word-wrap:break-word;
+
+}
+
+.user-message{
+
+    align-self:flex-end;
+
+    max-width:75%;
+
+    padding:14px 18px;
+
+    background:rgba(108,108,240,.55);
+
+    backdrop-filter:blur(6px);
+
+    color:white;
+
+    font-size:14.5px;
+
+    line-height:1.5;
+
+    border-radius:16px 16px 4px 16px;
+
+    border:1px solid rgba(255,255,255,.16);
+
+    word-wrap:break-word;
+
+}
+
+.chat-photo-thumb{
+
+    max-width:220px;
+
+    border-radius:10px;
+
+    display:block;
+
+    margin-bottom:8px;
+
+}
+
+/* ==========================
+    ATTACHMENT PREVIEW STRIP
+========================== */
+
+.attachment-preview{
+
+    display:none;
+
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    padding:10px 4px 0;
+
+}
+
+.attachment-chip{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:7px;
+
+    padding:6px 10px 6px 6px;
+
+    background:rgba(255,255,255,.14);
+
+    backdrop-filter:blur(10px);
+
+    border:1px solid rgba(255,255,255,.2);
+
+    border-radius:10px;
+
+    color:white;
+
+}
+
+.attachment-chip img{
+
+    width:30px;
+
+    height:30px;
+
+    object-fit:cover;
+
+    border-radius:6px;
+
+    display:block;
+
+}
+
+.attachment-file-icon{
+
+    width:30px;
+
+    height:30px;
+
+    border-radius:6px;
+
+    background:rgba(255,255,255,.14);
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    flex-shrink:0;
+
+}
+
+.attachment-file-icon svg{
+
+    width:15px;
+
+    height:15px;
+
+    stroke:rgba(255,255,255,.85);
+
+}
+
+.attachment-name{
+
+    font-size:12.5px;
+
+    max-width:120px;
+
+    white-space:nowrap;
+
+    overflow:hidden;
+
+    text-overflow:ellipsis;
+
+}
+
+.attachment-remove{
+
+    width:18px;
+
+    height:18px;
+
+    flex-shrink:0;
+
+    border:none;
+
+    border-radius:50%;
+
+    background:rgba(255,255,255,.16);
+
+    color:white;
+
+    font-size:13px;
+
+    line-height:1;
+
+    cursor:pointer;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    transition:background .15s ease;
+
+}
+
+.attachment-remove:hover{
+
+    background:rgba(229,72,77,.55);
+
+}
+
+/* ==========================
+        INPUT AREA
+========================== */
+
+.input-area{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-top:18px;
+
+}
+
+#userInput{
+
+    flex:1;
+
+    padding:14px 18px;
+
+    border:1px solid rgba(255,255,255,.18);
+
+    outline:none;
+
+    border-radius:14px;
+
+    background:rgba(255,255,255,.9);
+
+    font-size:15px;
+
+    transition:border-color .15s ease, box-shadow .15s ease;
+
+}
+
+#userInput:focus{
+
+    border-color:rgba(108,108,240,.6);
+
+    box-shadow:0 0 0 3px rgba(108,108,240,.18);
+
+}
+
+#sendBtn{
+
+    padding:14px 24px;
+
+    border:1px solid rgba(255,255,255,.22);
+
+    border-radius:14px;
+
+    background:rgba(255,255,255,.14);
+
+    backdrop-filter:blur(10px);
+
+    color:white;
+
+    font-size:14.5px;
+
+    font-weight:500;
+
+    cursor:pointer;
+
+    transition:background .15s ease, border-color .15s ease;
+
+}
+
+#sendBtn:hover{
+
+    background:rgba(255,255,255,.22);
+
+    border-color:rgba(255,255,255,.32);
+
+}
+
+.icon-btn{
+
+    width:46px;
+
+    height:46px;
+
+    flex-shrink:0;
+
+    border:1px solid rgba(255,255,255,.2);
+
+    border-radius:14px;
+
+    background:rgba(255,255,255,.12);
+
+    backdrop-filter:blur(10px);
+
+    color:white;
+
+    cursor:pointer;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    transition:background .15s ease, border-color .15s ease, box-shadow .15s ease;
+
+}
+
+.icon-btn:hover{
+
+    background:rgba(255,255,255,.2);
+
+    border-color:rgba(255,255,255,.3);
+
+}
+
+.icon-btn svg{
+
+    width:19px;
+
+    height:19px;
+
+    stroke:rgba(255,255,255,.92);
+
+}
+
+.icon-btn.listening{
+
+    background:rgba(108,108,240,.4);
+
+    border-color:rgba(108,108,240,.6);
+
+    box-shadow:0 0 0 4px rgba(108,108,240,.15);
+
+}
+
+/* Legacy alias kept so nothing breaks if an older
+   reference to .mic-btn still exists somewhere */
+.mic-btn{
+
+    width:46px;
+
+    height:46px;
+
+    flex-shrink:0;
+
+    border:1px solid rgba(255,255,255,.2);
+
+    border-radius:14px;
+
+    background:rgba(255,255,255,.12);
+
+    backdrop-filter:blur(10px);
+
+    color:white;
+
+    cursor:pointer;
+
+}
+
+.mic-btn.listening{
+
+    background:rgba(108,108,240,.4);
+
+    border-color:rgba(108,108,240,.6);
+
+}
+
+/* ==========================
+        SCROLLBAR
+========================== */
+
+.chat-box::-webkit-scrollbar{
+
+    width:8px;
+
+}
+
+.chat-box::-webkit-scrollbar-thumb{
+
+    background:rgba(255,255,255,.25);
+
+    border-radius:20px;
+
+}
+
+.chat-box::-webkit-scrollbar-track{
+
+    background:transparent;
+
+}
+
+/* ==========================
+        ANIMATION
+========================== */
+
+.bot-message,
+.user-message{
+
+    animation:fadeIn .3s ease;
+
+}
+
+@keyframes fadeIn{
+
+    from{
+
+        opacity:0;
+        transform:translateY(10px);
+
+    }
+
+    to{
+
+        opacity:1;
+        transform:translateY(0);
+
+    }
+
+}
+
+/* ==========================
+      RESPONSIVE
+========================== */
+
+@media(max-width:900px){
+
+    h1{
+
+        font-size:34px;
+
+    }
+
+}
+
+@media(max-width:700px){
+
+    .container{
+
+        padding:18px;
+
+    }
+
+    .bot-message,
+    .user-message{
+
+        max-width:90%;
+
+    }
+
+}.chat-file-tag{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:10px;
+    margin-bottom:8px;
+    font-size:13px;
+}
+
+.chat-file-tag svg{
+    width:16px;
+    height:16px;
+    stroke:rgba(255,255,255,.85);
+    flex-shrink:0;
+}

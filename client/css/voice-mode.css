@@ -1,0 +1,244 @@
+/* ==========================================
+   VED AI — VOICE MODE
+   Dark / neon-blue / glassmorphism theme
+   ========================================== */
+
+:root {
+    --ved-bg: #060911;
+    --ved-glass: rgba(16, 22, 38, 0.55);
+    --ved-border: rgba(120, 170, 255, 0.18);
+    --ved-cyan: #3ddcff;
+    --ved-blue: #5b6ef5;
+    --ved-text: #eaf1ff;
+    --ved-muted: #7f8bab;
+}
+
+/* -------- Overlay -------- */
+
+#voiceOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    background: radial-gradient(circle at 50% 35%, rgba(61, 220, 255, 0.08), transparent 60%),
+                rgba(4, 6, 12, 0.72);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(1.02);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+
+    font-family: "Space Grotesk", "Inter", sans-serif;
+}
+
+#voiceOverlay.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: scale(1);
+}
+
+/* -------- Exit button -------- */
+
+.voice-exit-btn {
+    position: absolute;
+    top: 28px;
+    right: 28px;
+
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--ved-glass);
+    border: 1px solid var(--ved-border);
+    color: var(--ved-text);
+    font-size: 18px;
+    cursor: pointer;
+
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.voice-exit-btn:hover {
+    background: rgba(120, 170, 255, 0.16);
+    transform: scale(1.06);
+}
+
+/* -------- Logo + name -------- */
+
+.voice-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 36px;
+}
+
+.voice-brand img {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    box-shadow: 0 0 22px rgba(61, 220, 255, 0.35);
+    margin-bottom: 10px;
+}
+
+.voice-brand .voice-name {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--ved-text);
+    text-transform: uppercase;
+}
+
+/* -------- Orb -------- */
+
+.orb-wrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 34px;
+}
+
+.orb-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1.5px solid rgba(61, 220, 255, 0.35);
+    opacity: 0;
+}
+
+.orb-core {
+    width: 108px;
+    height: 108px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--ved-cyan), var(--ved-blue) 70%, #1a2350 100%);
+    box-shadow: 0 0 40px rgba(61, 220, 255, 0.45), 0 0 90px rgba(91, 110, 245, 0.25);
+    transition: box-shadow 0.4s ease, transform 0.4s ease;
+}
+
+/* States: idle (default) */
+
+#voiceOverlay[data-state="idle"] .orb-core {
+    animation: idleBreathe 3.2s ease-in-out infinite;
+}
+
+@keyframes idleBreathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+}
+
+/* States: listening — expanding pulse rings */
+
+#voiceOverlay[data-state="listening"] .orb-core {
+    box-shadow: 0 0 55px rgba(61, 220, 255, 0.65), 0 0 120px rgba(91, 110, 245, 0.35);
+}
+
+#voiceOverlay[data-state="listening"] .orb-ring {
+    animation: ringPulse 1.8s ease-out infinite;
+}
+
+#voiceOverlay[data-state="listening"] .orb-ring:nth-child(2) { animation-delay: 0.4s; }
+#voiceOverlay[data-state="listening"] .orb-ring:nth-child(3) { animation-delay: 0.8s; }
+
+@keyframes ringPulse {
+    0%   { width: 108px; height: 108px; opacity: 0.55; }
+    100% { width: 240px; height: 240px; opacity: 0; }
+}
+
+/* States: thinking — rotating gradient ring */
+
+#voiceOverlay[data-state="thinking"] .orb-core {
+    animation: thinkSpin 1.4s linear infinite;
+    background: conic-gradient(from 0deg, var(--ved-cyan), var(--ved-blue), var(--ved-cyan));
+}
+
+@keyframes thinkSpin {
+    0%   { transform: rotate(0deg) scale(0.96); }
+    100% { transform: rotate(360deg) scale(0.96); }
+}
+
+/* States: speaking — waveform replaces rings visually via bars below orb */
+
+#voiceOverlay[data-state="speaking"] .orb-core {
+    box-shadow: 0 0 60px rgba(61, 220, 255, 0.7), 0 0 130px rgba(91, 110, 245, 0.4);
+}
+
+/* -------- Waveform (used while listening + speaking) -------- */
+
+.voice-waveform {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    height: 36px;
+    margin-bottom: 22px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.voice-waveform.visible {
+    opacity: 1;
+}
+
+.voice-waveform span {
+    display: block;
+    width: 4px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--ved-cyan), var(--ved-blue));
+    height: 6px;
+    transition: height 0.09s ease;
+}
+
+/* -------- Status text -------- */
+
+.voice-status {
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    color: var(--ved-muted);
+    min-height: 20px;
+}
+
+#voiceOverlay[data-state="listening"] .voice-status { color: var(--ved-cyan); }
+#voiceOverlay[data-state="thinking"] .voice-status { color: var(--ved-blue); }
+#voiceOverlay[data-state="speaking"] .voice-status { color: var(--ved-text); }
+
+/* -------- Live transcript (optional, shows recognized text) -------- */
+
+.voice-transcript {
+    max-width: 480px;
+    text-align: center;
+    margin-top: 18px;
+    padding: 0 20px;
+    font-size: 14px;
+    color: var(--ved-muted);
+    min-height: 20px;
+}
+
+/* -------- Mic entry button glow (in normal chat UI) -------- */
+
+.mic-btn.voice-armed {
+    box-shadow: 0 0 0 0 rgba(61, 220, 255, 0.5);
+    animation: armedPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes armedPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(61, 220, 255, 0.45); }
+    70%  { box-shadow: 0 0 0 12px rgba(61, 220, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(61, 220, 255, 0); }
+}
+
+/* -------- Responsive -------- */
+
+@media (max-width: 480px) {
+    .orb-wrap { width: 170px; height: 170px; }
+    .orb-core { width: 84px; height: 84px; }
+}
