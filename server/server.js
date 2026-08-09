@@ -1,9 +1,17 @@
 // ==========================================
-// VED AI SERVER v8.1 (THREE SHIELDS EDITION)
+// VED AI SERVER v8.2 (DEMO MODE - NO DATABASE)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
-const db = require("./database");
+console.log('🎯 DEMO MODE: Running without database for judges demo');
+
+// MOCK DATABASE (Demo ke liye - kuch save nahi hoga, bas chalega)
+const db = {
+    run: (query, params, callback) => { if (callback) callback(null); },
+    all: (query, params, callback) => { if (callback) callback(null, []); },
+    get: (query, params, callback) => { if (callback) callback(null, {}); }
+};
+
 require("dotenv").config();
 
 const path = require("path");
@@ -43,30 +51,13 @@ const ai = new GoogleGenAI({
 });
 
 // ===============================
-// MEMORY (Startup se 30 messages load)
+// MEMORY (Empty - Demo Mode)
 // ===============================
 let conversationHistory = [];
-
-db.all(
-    "SELECT role, message FROM chats ORDER BY id DESC LIMIT 30",
-    [],
-    (err, rows) => {
-        if (err) {
-            console.error("❌ Failed to load chat history:", err.message);
-            return;
-        }
-        conversationHistory = rows
-            .reverse()
-            .map(row => ({
-                role: row.role === "user" ? "user" : "model",
-                parts: [{ text: row.message }]
-            }));
-        console.log(`🧠 Loaded ${conversationHistory.length} past messages from database.`);
-    }
-);
+console.log("🧠 Demo Mode: Starting with empty conversation history");
 
 // ===============================
-// BLACKLIST TABLE (VED ki Suraksha Yaaddasht)
+// BLACKLIST TABLE (Mock - Demo Mode)
 // ===============================
 db.run("CREATE TABLE IF NOT EXISTS blacklist (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT NOT NULL, note TEXT)");
 
