@@ -3,22 +3,22 @@
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
-const sqlite3 = require("sqlite3").verbose();
+// DEMO MODE - Mock Database
+console.log('🎯 DEMO MODE: Mock database loaded');
 
-const db = new sqlite3.Database("./ved.db", (err) => {
-
-    if (err) {
-
-        console.error("❌ Database Error:", err.message);
-
-    } else {
-
-        console.log("✅ Connected to SQLite Database.");
-
+const mockDb = {
+    run: (query, params, callback) => { 
+        if (callback) callback(null); 
+    },
+    all: (query, params, callback) => { 
+        if (callback) callback(null, []); 
+    },
+    get: (query, params, callback) => { 
+        if (callback) callback(null, {}); 
     }
+};
 
-});
-
+module.exports = mockDb;
 // ==========================================
 // TABLES
 // ==========================================
