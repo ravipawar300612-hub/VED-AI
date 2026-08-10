@@ -1,9 +1,8 @@
 // ==========================================
-// VED AI DATABASE
+// VED AI DATABASE - DEMO MODE
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
-// DEMO MODE - Mock Database
 console.log('🎯 DEMO MODE: Mock database loaded');
 
 const mockDb = {
@@ -19,48 +18,3 @@ const mockDb = {
 };
 
 module.exports = mockDb;
-// ==========================================
-// TABLES
-// ==========================================
-
-db.serialize(() => {
-
-    // =========================
-    // CHAT TABLE
-    // =========================
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS chats (
-
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-            role TEXT,
-
-            message TEXT,
-
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-
-        )
-    `);
-
-    // =========================
-    // MEMORY TABLE
-    // =========================
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS memories (
-
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-            memoryKey TEXT UNIQUE,
-
-            memoryValue TEXT,
-
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-
-        )
-    `);
-
-});
-
-module.exports = db;
