@@ -1,17 +1,9 @@
 // ==========================================
-// VED AI SERVER v8.2 (DEMO MODE - NO DATABASE)
+// VED AI SERVER v8.2 (THREE SHIELDS - DEMO READY)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
-console.log('🎯 DEMO MODE: Running without database for judges demo');
-
-// MOCK DATABASE (Demo ke liye - kuch save nahi hoga, bas chalega)
-const db = {
-    run: (query, params, callback) => { if (callback) callback(null); },
-    all: (query, params, callback) => { if (callback) callback(null, []); },
-    get: (query, params, callback) => { if (callback) callback(null, {}); }
-};
-
+const db = require("./database");
 require("dotenv").config();
 
 const path = require("path");
@@ -51,13 +43,30 @@ const ai = new GoogleGenAI({
 });
 
 // ===============================
-// MEMORY (Empty - Demo Mode)
+// MEMORY (Startup se 30 messages load)
 // ===============================
 let conversationHistory = [];
-console.log("🧠 Demo Mode: Starting with empty conversation history");
+
+db.all(
+    "SELECT role, message FROM chats ORDER BY id DESC LIMIT 30",
+    [],
+    (err, rows) => {
+        if (err) {
+            console.error("❌ Failed to load chat history:", err.message);
+            return;
+        }
+        conversationHistory = rows
+            .reverse()
+            .map(row => ({
+                role: row.role === "user" ? "user" : "model",
+                parts: [{ text: row.message }]
+            }));
+        console.log(`🧠 Loaded ${conversationHistory.length} past messages from database.`);
+    }
+);
 
 // ===============================
-// BLACKLIST TABLE (Mock - Demo Mode)
+// BLACKLIST TABLE
 // ===============================
 db.run("CREATE TABLE IF NOT EXISTS blacklist (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT NOT NULL, note TEXT)");
 
@@ -195,7 +204,7 @@ app.post("/document", async (req, res) => {
     try {
         const { document, message } = req.body;
         if (!document) return res.status(400).json({ reply: "No document received." });
-        
+
         const base64Data = document.includes(",") ? document.split(",")[1] : document;
         const buffer = Buffer.from(base64Data, "base64");
 
@@ -270,10 +279,8 @@ app.post("/check-scam", async (req, res) => {
 
         console.log("🛡️ Checking:", suspiciousMessage);
 
-        // STEP 1: TERA RADAR (offline + instant)
         const radar = scanMessage(suspiciousMessage);
 
-        // STEP 1.5: BLACKLIST CHECK (VED ki yaaddasht)
         const blacklistRows = await new Promise((resolve) => {
             db.all("SELECT pattern FROM blacklist", [], (err, rows) => resolve(err ? [] : (rows || [])));
         });
@@ -292,7 +299,6 @@ app.post("/check-scam", async (req, res) => {
 
         console.log("📡 Radar Verdict:", radar.radarVerdict, "| Score:", radar.riskScore);
 
-        // STEP 2: GEMINI KA DIMAAG (internet ho toh)
         let reply;
         try {
             const blacklistNote = hits.length > 0
@@ -333,7 +339,7 @@ Message: "${suspiciousMessage}"`;
 });
 
 // ===============================
-// ELEVENLABS TTS ROUTE (GOOSEBUMPS EDITION)
+// ELEVENLABS TTS ROUTE
 // ===============================
 app.post("/tts", async (req, res) => {
     try {
@@ -383,10 +389,15 @@ app.post("/tts", async (req, res) => {
 });
 
 // ===============================
-// SHIELD #2: VED SWASTHYA (Health Module)
+// SHIELDS (Health + Crop)
 // ===============================
 require("./health")(app, ai, db);
-require("./crop")(app, ai, db);
+try {
+    require("./crop")(app, ai, db);
+    console.log("🌾 Crop shield loaded");
+} catch (e) {
+    console.log("⚠️ Crop module skip:", e.message);
+}
 
 // ===============================
 // AUTH + START SERVER
