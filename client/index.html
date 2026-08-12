@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    
+
     <!-- PWA: Full screen app banane ke liye -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,6 +30,37 @@
     <link rel="stylesheet" href="css/loading.css">
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/suraksha.css">
+
+    <!-- FULL SCREEN FIX (sabse last mein, isliye sabse powerful) -->
+    <style>
+        html {
+            height: 100%;
+            background: #0b0f14;
+        }
+        body {
+            height: 100vh !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+            background-color: #0b0f14 !important;
+            overflow: hidden !important;
+        }
+        .app {
+            height: 100vh !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+        }
+        .main {
+            height: 100%;
+        }
+        .container {
+            height: 100% !important;
+            min-height: 0 !important;
+        }
+        .chat-box {
+            flex: 1 !important;
+            min-height: 0 !important;
+        }
+    </style>
 </head>
 
 <body>
