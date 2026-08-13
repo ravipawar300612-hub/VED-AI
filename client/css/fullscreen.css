@@ -1,0 +1,42 @@
+/* =====================================
+   FULL SCREEN FIX - Sayali P. R. Pawar
+===================================== */
+html { height: 100%; background: #0b0f14; }
+
+body {
+    margin: 0 !important;
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+    background-color: #0b0f14 !important;
+}
+
+.app {
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    display: flex !important;
+}
+
+.main {
+    flex: 1;
+    height: 100%;
+    display: flex;
+}
+
+.container {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.chat-box {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
