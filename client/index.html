@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <!-- PWA & FULL SCREEN META TAGS -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -31,36 +31,54 @@
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/suraksha.css">
 
-    <!-- ULTIMATE FULLSCREEN & DARK MODE FIX -->
+    <!-- FULLSCREEN + WIDTH FIX + PAPA KA WALLPAPER -->
     <style>
+        html {
+            background: #0b0f14;
+        }
         html, body {
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
+            max-width: 100vw !important;
             height: 100% !important;
-            height: 100vh !important;
             height: 100dvh !important;
-            background-color: #0b0f14 !important;
-            color: #ffffff;
-            overflow-x: hidden !important;
-            -webkit-tap-highlight-color: transparent;
+            overflow: hidden !important;
         }
-        body {
-            overscroll-behavior-y: contain;
-        }
-        #loading-screen, .app {
-            height: 100vh !important;
+        .app {
+            width: 100% !important;
+            max-width: 100vw !important;
+            height: 100% !important;
             height: 100dvh !important;
-            background-color: #0b0f14 !important;
+            background: transparent !important;
+            overflow: hidden !important;
         }
-        .main, .container {
+        .main {
+            flex: 1 !important;
+            min-width: 0 !important;
+            height: 100% !important;
+        }
+        .container {
+            width: 100% !important;
+            max-width: 100vw !important;
             height: 100% !important;
             min-height: 0 !important;
         }
         .chat-box {
             flex: 1 !important;
             min-height: 0 !important;
+            max-width: 100% !important;
             overflow-y: auto !important;
+        }
+        .input-area {
+            max-width: 100% !important;
+        }
+        #userInput {
+            min-width: 0 !important;
+            flex: 1 !important;
+        }
+        .bot-message, .user-message {
+            max-width: 85% !important;
         }
     </style>
 </head>
