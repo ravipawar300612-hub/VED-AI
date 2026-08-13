@@ -5,13 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 
-    <!-- PWA: Full screen app banane ke liye -->
+    <!-- PWA & FULL SCREEN META TAGS -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="VED AI">
-    <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0b0f14">
+    <link rel="manifest" href="/manifest.json">
 
     <title>VED AI</title>
     <link rel="icon" type="image/png" href="logo.png">
@@ -22,7 +22,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-    <!-- CSS -->
+    <!-- CSS FILES -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="css/voice-mode.css">
     <link rel="stylesheet" href="css/camera-mode.css">
@@ -30,36 +30,37 @@
     <link rel="stylesheet" href="css/loading.css">
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/suraksha.css">
-        <link rel="stylesheet" href="css/fullscreen.css">
 
-    <!-- FULL SCREEN FIX (sabse last mein, isliye sabse powerful) -->
+    <!-- ULTIMATE FULLSCREEN & DARK MODE FIX -->
     <style>
-        html {
-            height: 100%;
-            background: #0b0f14;
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            background-color: #0b0f14 !important;
+            color: #ffffff;
+            overflow-x: hidden !important;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
+            overscroll-behavior-y: contain;
+        }
+        #loading-screen, .app {
             height: 100vh !important;
             height: 100dvh !important;
-            min-height: 100dvh !important;
             background-color: #0b0f14 !important;
-            overflow: hidden !important;
         }
-        .app {
-            height: 100vh !important;
-            height: 100dvh !important;
-            min-height: 100dvh !important;
-        }
-        .main {
-            height: 100%;
-        }
-        .container {
+        .main, .container {
             height: 100% !important;
             min-height: 0 !important;
         }
         .chat-box {
             flex: 1 !important;
             min-height: 0 !important;
+            overflow-y: auto !important;
         }
     </style>
 </head>
