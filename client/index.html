@@ -3,9 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- PWA & FULL SCREEN META TAGS -->
+    <!-- PWA META TAGS -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,54 +31,48 @@
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/suraksha.css">
 
-    <!-- FULLSCREEN + WIDTH FIX + PAPA KA WALLPAPER -->
+    <!-- FINAL SCREEN FIX: full height + wallpaper + no cut -->
     <style>
         html {
             background: #0b0f14;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
         html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 100% !important;
-            max-width: 100vw !important;
-            height: 100% !important;
-            height: 100dvh !important;
+            width: 100%;
+            max-width: 100vw;
+            height: 100%;
+            height: 100dvh;
             overflow: hidden !important;
         }
         .app {
-            width: 100% !important;
-            max-width: 100vw !important;
-            height: 100% !important;
-            height: 100dvh !important;
+            width: 100%;
+            max-width: 100vw;
+            height: 100%;
+            height: 100dvh;
             background: transparent !important;
-            overflow: hidden !important;
+            overflow: hidden;
         }
         .main {
-            flex: 1 !important;
-            min-width: 0 !important;
-            height: 100% !important;
+            flex: 1;
+            min-width: 0;
+            height: 100%;
         }
         .container {
-            width: 100% !important;
-            max-width: 100vw !important;
-            height: 100% !important;
-            min-height: 0 !important;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
         }
         .chat-box {
-            flex: 1 !important;
-            min-height: 0 !important;
-            max-width: 100% !important;
-            overflow-y: auto !important;
-        }
-        .input-area {
-            max-width: 100% !important;
+            flex: 1;
+            min-height: 0;
+            max-width: 100%;
+            overflow-y: auto;
         }
         #userInput {
-            min-width: 0 !important;
-            flex: 1 !important;
-        }
-        .bot-message, .user-message {
-            max-width: 85% !important;
+            min-width: 0;
         }
     </style>
 </head>
@@ -91,7 +85,7 @@
     <div class="center-content">
         <h1 id="logo"><span id="logo-text"></span></h1>
         <p id="founder">Created by<br><span>Sayali P. R. Pawar ❤️</span></p>
-        <p id="status-text">Initializing...</p>
+        <p id id="status-text">Initializing...</p>
         <div class="progress-container"><div id="progress-bar"></div></div>
         <p id="quote">Every intelligent system starts with a single thought.</p>
     </div>
