@@ -1,173 +1,80 @@
-/* =====================================
-   VED MISSIONS HUB — Professional Client
+/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   YE SERVER FILE HAI (NODE.JS)
+   Isme "document" wali koi cheez NAHI hogi!
    Founder : Sayali P. R. Pawar
-===================================== */
-(function () {
-    'use strict';
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
+const express = require('express');
 
-    const API_BASE = '/api/missions';
+let SDK = null, GeminiClass = null;
+try { GeminiClass = require('@google/genai').GoogleGenAI; SDK = 'genai'; } catch (e) {}
+if (!SDK) {
+    try { GeminiClass = require('@google/generative-ai').GoogleGenerativeAI; SDK = 'legacy'; } catch (e) {}
+}
 
-    const TAGS = {
-        prahari: 'System ka Remote Control — RTI & complaint auto-draft',
-        avenger: 'Digital Lawyer — refund & fraud ka legal notice',
-        nyay: 'Digital Lok Adalat — instant fair settlement',
-        satya: 'Deepfake & Fake News Forensics'
-    };
-    const ASKS = {
-        prahari: 'Civic issue likho (gadha, kachra, streetlight, riswat):',
-        avenger: 'Apna consumer case likho (refund, fake product, deposit fraud...):',
-        nyay: 'Dispute likho — dono sides ya apni side:',
-        satya: 'Forwarded message / viral claim yahan paste karo:'
-    };
-    const FALLBACK = [
-        { id: 'prahari', name: 'VED PRAHARI', icon: '🏛️' },
-        { id: 'avenger', name: 'VED AVENGER', icon: '⚖️' },
-        { id: 'nyay', name: 'VED NYAY', icon: '🤝' },
-        { id: 'satya', name: 'VED SATYA-SHIELD', icon: '👁️' }
-    ];
+const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY || '';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
-    let missions = FALLBACK;
-
-    function el(tag, cls, html) {
-        const n = document.createElement(tag);
-        if (cls) n.className = cls;
-        if (html !== undefined) n.innerHTML = html;
-        return n;
+const MISSIONS = {
+    prahari: {
+        name: 'VED PRAHARI', icon: '🏛️',
+        system: 'You are VED PRAHARI — India ka sabse sharp civic rights activist + legal expert AI. User ne civic issue diya hai. Hinglish mein structured output de:\n1) 📸 ISSUE REPORT — kya galat hai, severity (Low/Medium/High)\n2) 📮 FORMAL COMPLAINT LETTER — poora likha hua, [Ward Officer], [Area], [Date] placeholders ke saath, Municipal Corporation Act + RTI Act 2005 (Section 6) hawala\n3) ⏰ 7-DAY ACTION PLAN — Din 1: complaint, Din 7: RTI, Din 15: Twitter escalation.\nSharp, actionable tone.'
+    },
+    avenger: {
+        name: 'VED AVENGER', icon: '⚖️',
+        system: 'You are VED AVENGER — consumer rights lawyer AI, Consumer Protection Act 2019 expert. User ne consumer cheating ka case diya hai. Hinglish mein structured output de:\n1) 🔍 CASE SUMMARY\n2) 📜 LEGAL NOTICE DRAFT — CPA 2019 sections, 15-din deadline, refund + compensation\n3) 📧 CEO EMAIL\n4) 💡 NEXT STEPS — Helpline 1915, e-daakhil portal.\nPowerful legal tone.'
+    },
+    nyay: {
+        name: 'VED NYAY', icon: '🤝',
+        system: 'You are VED NYAY — unbiased AI mediator (Digital Lok Adalat). User ne dispute diya hai. Hinglish mein structured output de:\n1) ⚖️ FAIR ANALYSIS — dono sides neutral\n2) 🤝 SETTLEMENT AGREEMENT DRAFT — Party A/B, terms, date, signature placeholders\n3) 📋 LAW REFERENCES.\nNeutral, respectful, practical.'
+    },
+    satya: {
+        name: 'VED SATYA-SHIELD', icon: '👁️',
+        system: 'You are VED SATYA-SHIELD — deepfake & misinformation forensics AI. User ne forwarded message ya image description di hai. Hinglish mein structured output de:\n1) 🕵️ FORENSIC CHECKS\n2) 🚦 VERDICT — LIKELY REAL / SUSPICIOUS / LIKELY FAKE + confidence %\n3) 🛡️ SAFETY ADVICE — PIB Fact Check, source verify.\nScientific, clear tone.'
     }
-    function esc(s) {
-        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-    function fmt(s) {
-        return esc(s)
-            .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-            .replace(/\n/g, '<br>');
-    }
+};
 
-    const btn = el('button', null, '🚀');
-    btn.id = 'missionsBtn';
-    btn.title = 'VED Missions';
-    document.body.appendChild(btn);
+function extractText(resp) {
+    if (!resp) return '';
+    if (typeof resp.text === 'string') return resp.text;
+    if (typeof resp.text === 'function') return resp.text();
+    try { return resp.response.text(); } catch (e) {}
+    try { return resp.candidates[0].content.parts[0].text; } catch (e) {}
+    return JSON.stringify(resp);
+}
 
-    const overlay = el('div');
-    overlay.id = 'missionsOverlay';
-    document.body.appendChild(overlay);
+function createMissionsRouter() {
+    const router = express.Router();
+    const ai = (SDK && API_KEY) ? new GeminiClass({ apiKey: API_KEY }) : null;
 
-    btn.addEventListener('click', function () {
-        overlay.classList.add('open');
-        renderList();
+    router.get('/', (req, res) => {
+        res.json({ success: true, missions: Object.keys(MISSIONS).map(id => ({ id, name: MISSIONS[id].name, icon: MISSIONS[id].icon })) });
     });
 
-    function close() { overlay.classList.remove('open'); }
+    router.post('/:missionId', async (req, res) => {
+        const mission = MISSIONS[req.params.missionId];
+        if (!mission) return res.status(404).json({ success: false, error: 'Unknown mission' });
 
-    function head(title, sub, showClose) {
-        const h = el('div', 'ms-head');
-        if (!showClose) {
-            const back = el('button', 'ms-back', '←');
-            back.onclick = renderList;
-            h.appendChild(back);
-        }
-        const t = el('div');
-        t.innerHTML = '<div class="ms-title">' + title + '</div>' + (sub ? '<div class="ms-sub">' + esc(sub) + '</div>' : '');
-        h.appendChild(t);
-        if (showClose) {
-            const x = el('button', 'ms-back', '✕');
-            x.onclick = close;
-            h.appendChild(x);
-        }
-        return h;
-    }
+        const text = ((req.body && req.body.text) || '').trim();
+        if (!text) return res.status(400).json({ success: false, error: 'Case text required' });
+        if (!ai) return res.status(500).json({ success: false, error: 'Gemini API key not configured' });
 
-    function renderList() {
-        overlay.innerHTML = '';
-        overlay.appendChild(head('🚀 VED MISSIONS', 'Jo kaam baaki AI nahi karte — VED karta hai.', true));
-        const grid = el('div', 'ms-grid');
-        missions.forEach(function (m) {
-            const card = el('div', 'ms-card');
-            card.innerHTML =
-                '<div class="ms-icon">' + m.icon + '</div>' +
-                '<div class="ms-name">' + esc(m.name) + '</div>' +
-                '<div class="ms-tag">' + esc(TAGS[m.id] || '') + '</div>';
-            card.addEventListener('click', function () { renderComposer(m); });
-            grid.appendChild(card);
-        });
-        overlay.appendChild(grid);
-    }
-
-    function renderComposer(m) {
-        overlay.innerHTML = '';
-        overlay.appendChild(head(m.icon + ' ' + esc(m.name), ASKS[m.id] || 'Apna case likho:', false));
-        const ta = el('textarea');
-        ta.id = 'msText';
-        ta.placeholder = 'Yahan apna case likho...';
-        overlay.appendChild(ta);
-        const send = el('button', 'ms-primary', '⚡ Mission Launch Karo');
-        send.addEventListener('click', function () { launch(m, ta.value); });
-        overlay.appendChild(send);
-        ta.focus();
-    }
-
-    function renderLoading(m) {
-        overlay.innerHTML = '';
-        overlay.appendChild(head(m.icon + ' ' + esc(m.name), 'VED kaam kar raha hai...', false));
-        overlay.appendChild(el('div', 'ms-spinner'));
-        overlay.appendChild(el('div', 'ms-loading-text', 'Mission report taiyar ho rahi hai...'));
-    }
-
-    function renderReport(m, report) {
-        overlay.innerHTML = '';
-        overlay.appendChild(head(m.icon + ' ' + esc(m.name), 'MISSION REPORT ✅', false));
-        const box = el('div', 'ms-report');
-        box.innerHTML = fmt(report);
-        overlay.appendChild(box);
-        const actions = el('div', 'ms-actions');
-        const copy = el('button', null, '📋 Copy Karo');
-        copy.onclick = function () {
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(report).then(function () { copy.textContent = '✅ Copied!'; });
+        try {
+            const prompt = mission.system + '\n\n=== USER CASE ===\n' + text;
+            let report;
+            if (SDK === 'genai') {
+                report = extractText(await ai.models.generateContent({ model: MODEL, contents: prompt }));
             } else {
-                alert('Text select karke copy karo.');
+                const model = ai.getGenerativeModel({ model: MODEL });
+                report = extractText(await model.generateContent(prompt));
             }
-        };
-        const again = el('button', null, '🔄 Naya Mission');
-        again.onclick = renderList;
-        actions.appendChild(copy);
-        actions.appendChild(again);
-        overlay.appendChild(actions);
-        overlay.scrollTop = 0;
-    }
+            res.json({ success: true, mission: req.params.missionId, name: mission.name, icon: mission.icon, report });
+        } catch (err) {
+            console.error('[VED MISSIONS ERROR]', err.message);
+            res.status(500).json({ success: false, error: 'Mission failed: ' + err.message });
+        }
+    });
 
-    function renderError(m, msg) {
-        overlay.innerHTML = '';
-        overlay.appendChild(head(m.icon + ' ' + esc(m.name), '', false));
-        overlay.appendChild(el('div', 'ms-error', '❌ ' + esc(msg || 'Kuch galat ho gaya. Dobara try karo.')));
-        const actions = el('div', 'ms-actions');
-        const retry = el('button', null, '↩️ Wapas');
-        retry.onclick = renderList;
-        actions.appendChild(retry);
-        overlay.appendChild(actions);
-    }
+    return router;
+}
 
-    function launch(m, text) {
-        const t = (text || '').trim();
-        if (!t) { alert('Pehle apna case likho!'); return; }
-        renderLoading(m);
-        fetch(API_BASE + '/' + m.id, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: t })
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (!data.success) throw new Error(data.error || 'Server error');
-            renderReport(m, data.report);
-        })
-        .catch(function (e) {
-            renderError(m, e && e.message);
-        });
-    }
-
-    fetch(API_BASE)
-        .then(function (r) { return r.json(); })
-        .then(function (d) { if (d && d.success && d.missions && d.missions.length) missions = d.missions; })
-        .catch(function () {});
-})();
+module.exports = createMissionsRouter;
