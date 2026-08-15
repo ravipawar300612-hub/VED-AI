@@ -405,6 +405,7 @@ try {
 setupAuth(app);
 
 const PORT = process.env.PORT || 3000;
+app.use('/api/missions', require('./routes/missions')());
 app.listen(PORT, () => {
     console.log(`🚀 VED AI Server Running on Port ${PORT}`);
 });
