@@ -1,0 +1,67 @@
+/* =====================================
+   VED MISSIONS HUB — Professional UI
+   Founder : Sayali P. R. Pawar
+===================================== */
+#missionsBtn{
+    position:fixed;left:16px;bottom:26px;width:58px;height:58px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.25);
+    background:linear-gradient(135deg,#ff9a3d,#ff5e62);
+    color:#fff;font-size:26px;z-index:9990;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 28px rgba(255,94,98,.5);
+    transition:transform .15s ease;
+}
+#missionsBtn:active{transform:scale(.9);}
+#missionsOverlay{
+    position:fixed;inset:0;background:rgba(4,10,18,.97);
+    z-index:9995;display:none;flex-direction:column;
+    padding:18px;overflow-y:auto;
+}
+#missionsOverlay.open{display:flex;}
+.ms-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.ms-back{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;width:38px;height:38px;border-radius:12px;font-size:16px;cursor:pointer;flex-shrink:0;}
+.ms-title{color:#fff;font-size:20px;font-weight:700;}
+.ms-sub{color:rgba(255,255,255,.6);font-size:12.5px;margin-top:2px;}
+.ms-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+@media(min-width:700px){.ms-grid{grid-template-columns:1fr 1fr;}}
+.ms-card{
+    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
+    border-radius:18px;padding:18px;cursor:pointer;color:#fff;
+    transition:background .15s ease, transform .15s ease;
+}
+.ms-card:hover{background:rgba(255,255,255,.12);}
+.ms-card:active{transform:scale(.98);}
+.ms-icon{font-size:30px;margin-bottom:8px;}
+.ms-name{font-size:16px;font-weight:700;}
+.ms-tag{color:rgba(255,255,255,.6);font-size:12px;margin-top:4px;line-height:1.4;}
+#msText{
+    width:100%;min-height:120px;background:rgba(255,255,255,.94);
+    border:none;border-radius:14px;padding:14px;font-size:14.5px;color:#101418;
+    resize:vertical;outline:none;
+}
+.ms-primary{
+    margin-top:12px;width:100%;padding:15px;border:none;border-radius:14px;
+    background:linear-gradient(135deg,#6c6cf0,#8a5cf6);color:#fff;
+    font-size:15px;font-weight:700;cursor:pointer;
+}
+.ms-primary:disabled{opacity:.6;cursor:wait;}
+.ms-report{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+    border-radius:18px;padding:18px;color:#fff;font-size:14px;line-height:1.65;
+}
+.ms-actions{display:flex;gap:10px;margin-top:14px;}
+.ms-actions button{
+    flex:1;padding:13px;border-radius:13px;border:1px solid rgba(255,255,255,.2);
+    background:rgba(255,255,255,.1);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;
+}
+.ms-spinner{
+    width:46px;height:46px;margin:60px auto;border-radius:50%;
+    border:4px solid rgba(255,255,255,.15);border-top-color:#8a5cf6;
+    animation:msSpin .9s linear infinite;
+}
+@keyframes msSpin{to{transform:rotate(360deg);}}
+.ms-loading-text{color:rgba(255,255,255,.7);text-align:center;font-size:13px;}
+.ms-error{
+    background:rgba(229,72,77,.15);border:1px solid rgba(229,72,77,.5);
+    border-radius:14px;padding:14px;color:#ffd7d7;font-size:13.5px;
+}
