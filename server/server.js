@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI SERVER v8.2 (THREE SHIELDS - DEMO READY)
+// VED AI SERVER v8.4 (PHASE 1 PACK + MISSIONS)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
@@ -11,7 +11,6 @@ const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenAI } = require("@google/genai");
-const { PDFParse } = require("pdf-parse");
 const setupAuth = require("./auth");
 const { scanMessage } = require("./scamEngine");
 
@@ -20,10 +19,7 @@ const app = express();
 // ===============================
 // MIDDLEWARE
 // ===============================
-app.use(cors({
-    origin: true,
-    credentials: true
-}));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 
 // AUTO-DETECT client folder
@@ -38,9 +34,7 @@ console.log("📁 Frontend folder detected at:", CLIENT_PATH);
 app.use(express.static(CLIENT_PATH));
 
 // Gemini AI setup
-const ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY
-});
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // ===============================
 // MEMORY (Startup se 30 messages load)
@@ -51,16 +45,11 @@ db.all(
     "SELECT role, message FROM chats ORDER BY id DESC LIMIT 30",
     [],
     (err, rows) => {
-        if (err) {
-            console.error("❌ Failed to load chat history:", err.message);
-            return;
-        }
-        conversationHistory = rows
-            .reverse()
-            .map(row => ({
-                role: row.role === "user" ? "user" : "model",
-                parts: [{ text: row.message }]
-            }));
+        if (err) { console.error("❌ Failed to load chat history:", err.message); return; }
+        conversationHistory = rows.reverse().map(row => ({
+            role: row.role === "user" ? "user" : "model",
+            parts: [{ text: row.message }]
+        }));
         console.log(`🧠 Loaded ${conversationHistory.length} past messages from database.`);
     }
 );
@@ -70,7 +59,6 @@ db.all(
 // ===============================
 db.run("CREATE TABLE IF NOT EXISTS blacklist (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT NOT NULL, note TEXT)");
 
-// Message se phone numbers + links nikalne ka helper
 function extractPatterns(text) {
     const patterns = new Set();
     const phones = text.match(/\+?\d[\d\s\-]{8,}\d/g) || [];
@@ -91,25 +79,26 @@ app.get("/", (req, res) => {
 // HISTORY ROUTE
 // ===============================
 app.get("/history", (req, res) => {
-    db.all(
-        "SELECT role, message FROM chats ORDER BY id ASC",
-        [],
-        (err, rows) => {
-            if (err) {
-                console.error("❌ Failed to fetch history:", err.message);
-                return res.status(500).json({ history: [] });
-            }
-            res.json({ history: rows });
-        }
-    );
+    db.all("SELECT role, message FROM chats ORDER BY id ASC", [], (err, rows) => {
+        if (err) { console.error("❌ Failed to fetch history:", err.message); return res.status(500).json({ history: [] }); }
+        res.json({ history: rows });
+    });
 });
 
 // ===============================
-// CHAT ROUTE
+// CHAT ROUTE (PHASE 1 — BOLI + MOOD)
 // ===============================
 app.post("/chat", async (req, res) => {
     try {
         const message = req.body.message;
+        const lang = String(req.body.lang || '').toLowerCase();
+        const tone = String(req.body.tone || '').toLowerCase();
+        const langLine = lang === 'hindi' ? '\nLANGUAGE RULE: Reply ONLY in simple Hindi (Devanagari script).'
+            : lang === 'marathi' ? '\nLANGUAGE RULE: Reply ONLY in simple Marathi (Devanagari script).'
+            : lang === 'english' ? '\nLANGUAGE RULE: Reply ONLY in simple English.' : '';
+        const toneLine = tone === 'bodyguard' ? '\nTONE: Serious protective bodyguard mode — short, firm, safety-first.'
+            : tone === 'ustaad' ? '\nTONE: Respectful teacher mode — clear, encouraging.'
+            : '\nTONE: Friendly dost mode — casual, warm, fun.';
         console.log("📩 User:", message);
 
         db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", message]);
@@ -145,10 +134,11 @@ IMPORTANT RULES:
 - Only explain in detail if user specifically asks "explain" or "tell me more"
 - Never use markdown (*, #, _, backticks)
 - Write exactly how you'd speak naturally
+${langLine}${toneLine}
 
 ${memoryBlock}`;
 
-        const contents = [ { role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory ];
+        const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory];
 
         const result = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: contents });
         const reply = result.candidates[0].content.parts[0].text;
@@ -208,11 +198,7 @@ app.post("/document", async (req, res) => {
         const base64Data = document.includes(",") ? document.split(",")[1] : document;
         const buffer = Buffer.from(base64Data, "base64");
 
-        const parser = new PDFParse({ data: buffer });
-        const parsed = await parser.getText();
-        await parser.destroy();
-
-        let text = parsed.text.trim();
+        let text = buffer.toString("utf-8").trim();
         if (!text) return res.json({ reply: "I couldn't find any readable text in that PDF." });
         if (text.length > 12000) text = text.slice(0, 12000) + "\n\n[Document truncated]";
 
@@ -272,13 +258,9 @@ app.get("/blacklist", (req, res) => {
 app.post("/check-scam", async (req, res) => {
     try {
         const suspiciousMessage = req.body.message;
-
-        if (!suspiciousMessage) {
-            return res.status(400).json({ reply: "Koi message nahi mila." });
-        }
+        if (!suspiciousMessage) return res.status(400).json({ reply: "Koi message nahi mila." });
 
         console.log("🛡️ Checking:", suspiciousMessage);
-
         const radar = scanMessage(suspiciousMessage);
 
         const blacklistRows = await new Promise((resolve) => {
@@ -368,10 +350,9 @@ app.post("/tts", async (req, res) => {
                     }
                 })
             });
-
             if (response.ok) {
                 audioBuffer = Buffer.from(await response.arrayBuffer());
-                console.log("🎙️ TTS via:", model);
+                console.log("🔊 TTS via:", model);
                 break;
             }
             console.warn("⚠️ Model failed:", model, response.status);
@@ -389,23 +370,23 @@ app.post("/tts", async (req, res) => {
 });
 
 // ===============================
-// SHIELDS (Health + Crop)
+// CROP MODULE (optional image processing)
 // ===============================
-require("./health")(app, ai, db);
+let cropModule = null;
 try {
-    require("./crop")(app, ai, db);
-    console.log("🌾 Crop shield loaded");
+    cropModule = require("./crop");
+    console.log("✂️ Crop module loaded");
 } catch (e) {
     console.log("⚠️ Crop module skip:", e.message);
 }
 
 // ===============================
-// AUTH + START SERVER
+// AUTH + MISSIONS + START SERVER
 // ===============================
 setupAuth(app);
+app.use('/api/missions', require('./routes/missions')());
 
 const PORT = process.env.PORT || 3000;
-app.use('/api/missions', require('./routes/missions')());
 app.listen(PORT, () => {
     console.log(`🚀 VED AI Server Running on Port ${PORT}`);
 });
