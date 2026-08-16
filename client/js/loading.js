@@ -1,10 +1,11 @@
 // ======================================
-// VED AI LOADING ANIMATION (OVERLAY MODE)
+// VED AI LOADING ANIMATION (SAFE MODE)
+// Kabhi nahi atkega — guaranteed!
 // ======================================
 (function () {
 
     const loadingScreen = document.getElementById("loading-screen");
-    if (!loadingScreen) return; // Agar loading screen nahi hai toh kuch mat karo
+    if (!loadingScreen) return;
 
     const logo = document.getElementById("logo-text");
     const founder = document.getElementById("founder");
@@ -24,6 +25,17 @@
 
     let logoIndex = 0;
     let statusIndex = 0;
+
+    function endLoading() {
+        loadingScreen.classList.add("fadeOut");
+        setTimeout(() => { loadingScreen.remove(); }, 1200);
+    }
+
+    // 🛡️ SAFETY: agar koi element missing ho, seedha loading khatam
+    if (!logo || !founder || !status || !quote) {
+        setTimeout(endLoading, 1500);
+        return;
+    }
 
     function animateLogo() {
         if (logoIndex >= logoSequence.length) {
@@ -57,13 +69,6 @@
     function showQuote() {
         quote.style.opacity = "1";
         setTimeout(() => { endLoading(); }, 2200);
-    }
-
-    function endLoading() {
-        loadingScreen.classList.add("fadeOut");
-        setTimeout(() => {
-            loadingScreen.remove(); // Overlay hat jayega aur chat page reveal hoga
-        }, 1200);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
