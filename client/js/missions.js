@@ -14,7 +14,12 @@
         { id: 'satya', name: 'VED SATYA-SHIELD', icon: '👁️', tag: 'Deepfake Forensics', ask: 'Forwarded message paste karo:' },
         { id: 'prana', name: 'VED PRANA', icon: '🫀', tag: 'Health & Mind Companion', ask: 'Tabiyat ya feelings likho:' },
         { id: 'hunar', name: 'VED HUNAR', icon: '💼', tag: 'Talent → Roadmap → Kamai', ask: 'Interests likho:' },
-        { id: 'yaadsathi', name: 'VED YAADSATHI', icon: '❤️', tag: 'Buzurgon ka Memory Companion', ask: 'Buzurg ki yaad likho:' }
+        { id: 'yaadsathi', name: 'VED YAADSATHI', icon: '❤️', tag: 'Buzurgon ka Memory Companion', ask: 'Buzurg ki yaad likho:' },
+        { id: 'ustaad', name: 'VED USTAAD', icon: '🎓', tag: 'Padhai Buddy', ask: 'Doubt ya topic likho:' },
+        { id: 'dawai', name: 'VED DAWAI DECODER', icon: '💊', tag: 'Medicine Translator', ask: 'Dawai ka naam likho:' },
+        { id: 'sarkari', name: 'VED SARKARI SAHAYAK', icon: '📋', tag: 'Form Guide', ask: 'Kaunsa form bharna hai:' },
+        { id: 'traffic', name: 'VED TRAFFIC RIGHTS', icon: '🚦', tag: 'Traffic Legal Advisor', ask: 'Police ne kyu roka:' },
+        { id: 'upi', name: 'VED UPI SHIELD', icon: '💸', tag: 'UPI Fraud Detector', ask: 'UPI message paste karo:' }
     ];
 
     let missions = FALLBACK;
@@ -34,12 +39,13 @@
             .replace(/\n/g, '<br>');
     }
 
-    const btn = el('button', null, '🚀');
+    const btn = document.createElement('button');
     btn.id = 'missionsBtn';
     btn.title = 'VED Missions';
+    btn.textContent = '🚀';
     document.body.appendChild(btn);
 
-    const overlay = el('div');
+    const overlay = document.createElement('div');
     overlay.id = 'missionsOverlay';
     document.body.appendChild(overlay);
 
@@ -51,17 +57,22 @@
     function close() { overlay.classList.remove('open'); }
 
     function head(title, sub, showClose) {
-        const h = el('div', 'ms-head');
+        const h = document.createElement('div');
+        h.className = 'ms-head';
         if (!showClose) {
-            const back = el('button', 'ms-back', '←');
+            const back = document.createElement('button');
+            back.className = 'ms-back';
+            back.textContent = '←';
             back.onclick = renderList;
             h.appendChild(back);
         }
-        const t = el('div');
+        const t = document.createElement('div');
         t.innerHTML = '<div class="ms-title">' + title + '</div>' + (sub ? '<div class="ms-sub">' + esc(sub) + '</div>' : '');
         h.appendChild(t);
         if (showClose) {
-            const x = el('button', 'ms-back', '✕');
+            const x = document.createElement('button');
+            x.className = 'ms-back';
+            x.textContent = '✕';
             x.onclick = close;
             h.appendChild(x);
         }
@@ -71,9 +82,11 @@
     function renderList() {
         overlay.innerHTML = '';
         overlay.appendChild(head('🚀 VED MISSIONS', 'Jo kaam baaki AI nahi karte — VED karta hai.', true));
-        const grid = el('div', 'ms-grid');
+        const grid = document.createElement('div');
+        grid.className = 'ms-grid';
         missions.forEach(function (m) {
-            const card = el('div', 'ms-card');
+            const card = document.createElement('div');
+            card.className = 'ms-card';
             card.innerHTML =
                 '<div class="ms-icon">' + m.icon + '</div>' +
                 '<div class="ms-name">' + esc(m.name) + '</div>' +
@@ -87,11 +100,13 @@
     function renderComposer(m) {
         overlay.innerHTML = '';
         overlay.appendChild(head(m.icon + ' ' + esc(m.name), m.ask || 'Apna case likho:', false));
-        const ta = el('textarea');
+        const ta = document.createElement('textarea');
         ta.id = 'msText';
         ta.placeholder = 'Yahan apna case likho...';
         overlay.appendChild(ta);
-        const send = el('button', 'ms-primary', '⚡ Mission Launch Karo');
+        const send = document.createElement('button');
+        send.className = 'ms-primary';
+        send.textContent = '⚡ Mission Launch Karo';
         send.addEventListener('click', function () { launch(m, ta.value); });
         overlay.appendChild(send);
         ta.focus();
@@ -100,18 +115,26 @@
     function renderLoading(m) {
         overlay.innerHTML = '';
         overlay.appendChild(head(m.icon + ' ' + esc(m.name), 'VED kaam kar raha hai...', false));
-        overlay.appendChild(el('div', 'ms-spinner'));
-        overlay.appendChild(el('div', 'ms-loading-text', 'Mission report taiyar ho rahi hai...'));
+        const sp = document.createElement('div');
+        sp.className = 'ms-spinner';
+        overlay.appendChild(sp);
+        const lt = document.createElement('div');
+        lt.className = 'ms-loading-text';
+        lt.textContent = 'Mission report taiyar ho rahi hai...';
+        overlay.appendChild(lt);
     }
 
     function renderReport(m, report) {
         overlay.innerHTML = '';
         overlay.appendChild(head(m.icon + ' ' + esc(m.name), 'MISSION REPORT ✅', false));
-        const box = el('div', 'ms-report');
+        const box = document.createElement('div');
+        box.className = 'ms-report';
         box.innerHTML = fmt(report);
         overlay.appendChild(box);
-        const actions = el('div', 'ms-actions');
-        const copy = el('button', null, '📋 Copy Karo');
+        const actions = document.createElement('div');
+        actions.className = 'ms-actions';
+        const copy = document.createElement('button');
+        copy.textContent = '📋 Copy Karo';
         copy.onclick = function () {
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(report).then(function () { copy.textContent = '✅ Copied!'; });
@@ -119,7 +142,8 @@
                 alert('Text select karke copy karo.');
             }
         };
-        const again = el('button', null, '🔄 Naya Mission');
+        const again = document.createElement('button');
+        again.textContent = '🔄 Naya Mission';
         again.onclick = renderList;
         actions.appendChild(copy);
         actions.appendChild(again);
@@ -130,9 +154,14 @@
     function renderError(m, msg) {
         overlay.innerHTML = '';
         overlay.appendChild(head(m.icon + ' ' + esc(m.name), '', false));
-        overlay.appendChild(el('div', 'ms-error', '❌ ' + esc(msg || 'Kuch galat ho gaya. Dobara try karo.')));
-        const actions = el('div', 'ms-actions');
-        const retry = el('button', null, '↩️ Wapas');
+        const er = document.createElement('div');
+        er.className = 'ms-error';
+        er.textContent = '❌ ' + (msg || 'Kuch galat ho gaya. Dobara try karo.');
+        overlay.appendChild(er);
+        const actions = document.createElement('div');
+        actions.className = 'ms-actions';
+        const retry = document.createElement('button');
+        retry.textContent = '↩️ Wapas';
         retry.onclick = renderList;
         actions.appendChild(retry);
         overlay.appendChild(actions);
