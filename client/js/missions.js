@@ -22,7 +22,12 @@
         { id: 'upi', name: 'VED UPI SHIELD', icon: '💸', tag: 'UPI Fraud Detector', ask: 'UPI message paste karo:' },
         { id: 'kisan', name: 'VED KISAN SHIELD', icon: '🌾', tag: 'Kisan ka Digital Bodyguard', ask: 'Fasal ki problem likho:' },
         { id: 'health', name: 'VED HEALTH SHIELD', icon: '🚑', tag: 'First Aid + Symptom Guide', ask: 'Symptoms likho:' },
-        { id: 'bankfraud', name: 'VED BANK FRAUD SHIELD', icon: '🏦', tag: 'Bank Scam Detector', ask: 'Bank message/call likho:' }
+        { id: 'bankfraud', name: 'VED BANK FRAUD SHIELD', icon: '🏦', tag: 'Bank Scam Detector', ask: 'Bank message/call likho:' },
+        { id: 'raksha', name: 'VED RAKSHA', icon: '🛡️', tag: 'Women Safety & Rights', ask: 'Situation likho:' },
+        { id: 'scholar', name: 'VED SCHOLARSHIP RADAR', icon: '🎯', tag: 'Scholarship Finder', ask: 'Class/course + state likho:' },
+        { id: 'rozgar', name: 'VED ROZGAR', icon: '🧑‍💼', tag: 'Resume + Pehli Naukri', ask: 'Qualification + interest likho:' },
+        { id: 'bima', name: 'VED BIMA SAHAYAK', icon: '📑', tag: 'Insurance Claim Guide', ask: 'Kaunsa claim karna hai:' },
+        { id: 'apatkal', name: 'VED APATKAL', icon: '🚨', tag: 'Emergency First-Response', ask: 'Emergency likho:' }
     ];
 
     let missions = FALLBACK;
@@ -53,7 +58,6 @@
     btn.style.zIndex = '9995';
     document.body.appendChild(btn);
 
-    // Rocket ko heart icon ke theek upar bithao
     function placeRocket() {
         const heart = document.querySelector('[id*="health" i], [class*="health" i], [id*="heart" i], [class*="heart" i]');
         if (heart && heart.getBoundingClientRect) {
@@ -65,7 +69,6 @@
         }
     }
 
-    // Purane alag buttons (health/kisan) ko rocket mein merge karo (hide)
     function mergeButtons() {
         document.querySelectorAll('button, a, div[role="button"]').forEach(function (b) {
             const key = ((b.id || '') + ' ' + (b.className || '')).toLowerCase();
