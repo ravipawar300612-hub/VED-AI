@@ -32,12 +32,6 @@
 
     let missions = FALLBACK;
 
-    function el(tag, cls, html) {
-        const n = document.createElement(tag);
-        if (cls) n.className = cls;
-        if (html !== undefined) n.innerHTML = html;
-        return n;
-    }
     function esc(s) {
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
@@ -47,41 +41,42 @@
             .replace(/\n/g, '<br>');
     }
 
+    // ==========================================
+    // 🚀 BULLETPROOF ROCKET BUTTON
+    // ==========================================
     const btn = document.createElement('button');
     btn.id = 'missionsBtn';
     btn.title = 'VED Missions';
     btn.textContent = '🚀';
-    btn.style.position = 'fixed';
-    btn.style.right = '16px';
-    btn.style.bottom = '200px';
-    btn.style.left = 'auto';
-    btn.style.zIndex = '9995';
+    
+    // !important use kiya hai taaki koi aur CSS isko uda na sake
+    btn.style.cssText = `
+        position: fixed !important;
+        bottom: 30px !important;
+        right: 20px !important;
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(135deg, #ff416c, #ff4b2b) !important;
+        color: white !important;
+        font-size: 28px !important;
+        border: 3px solid rgba(255,255,255,0.8) !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
+        z-index: 999999 !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: transform 0.2s !important;
+    `;
+    
+    btn.onmouseover = function() { btn.style.transform = 'scale(1.1) rotate(15deg)'; };
+    btn.onmouseout = function() { btn.style.transform = 'scale(1) rotate(0deg)'; };
     document.body.appendChild(btn);
 
-    function placeRocket() {
-        const heart = document.querySelector('[id*="health" i], [class*="health" i], [id*="heart" i], [class*="heart" i]');
-        if (heart && heart.getBoundingClientRect) {
-            const r = heart.getBoundingClientRect();
-            if (r.width > 0) {
-                btn.style.right = (window.innerWidth - r.right) + 'px';
-                btn.style.bottom = (window.innerHeight - r.top + 10) + 'px';
-            }
-        }
-    }
-
-    function mergeButtons() {
-        document.querySelectorAll('button, a, div[role="button"]').forEach(function (b) {
-            const key = ((b.id || '') + ' ' + (b.className || '')).toLowerCase();
-            if (/(health|kisan|farmer|crop)/.test(key) && b.id !== 'missionsBtn') {
-                b.style.display = 'none';
-            }
-        });
-        placeRocket();
-    }
-    setTimeout(mergeButtons, 500);
-    setTimeout(mergeButtons, 1500);
-    window.addEventListener('resize', placeRocket);
-
+    // ==========================================
+    // OVERLAY SETUP
+    // ==========================================
     const overlay = document.createElement('div');
     overlay.id = 'missionsOverlay';
     document.body.appendChild(overlay);
@@ -223,6 +218,7 @@
         });
     }
 
+    // Load missions from API
     fetch(API_BASE)
         .then(function (r) { return r.json(); })
         .then(function (d) { if (d && d.success && d.missions && d.missions.length) missions = d.missions; })
