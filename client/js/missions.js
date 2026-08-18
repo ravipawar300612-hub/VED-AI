@@ -42,16 +42,16 @@
     }
 
     // ==========================================
-    // 🚀 BULLETPROOF ROCKET BUTTON
+    // 🚀 BULLETPROOF ROCKET — LEFT AUTO FIX
     // ==========================================
     const btn = document.createElement('button');
     btn.id = 'missionsBtn';
     btn.title = 'VED Missions';
     btn.textContent = '🚀';
-    
-    // !important use kiya hai taaki koi aur CSS isko uda na sake
     btn.style.cssText = `
         position: fixed !important;
+        left: auto !important;
+        top: auto !important;
         bottom: 30px !important;
         right: 20px !important;
         width: 60px !important;
@@ -69,14 +69,10 @@
         justify-content: center !important;
         transition: transform 0.2s !important;
     `;
-    
     btn.onmouseover = function() { btn.style.transform = 'scale(1.1) rotate(15deg)'; };
     btn.onmouseout = function() { btn.style.transform = 'scale(1) rotate(0deg)'; };
     document.body.appendChild(btn);
 
-    // ==========================================
-    // OVERLAY SETUP
-    // ==========================================
     const overlay = document.createElement('div');
     overlay.id = 'missionsOverlay';
     document.body.appendChild(overlay);
@@ -218,7 +214,6 @@
         });
     }
 
-    // Load missions from API
     fetch(API_BASE)
         .then(function (r) { return r.json(); })
         .then(function (d) { if (d && d.success && d.missions && d.missions.length) missions = d.missions; })
