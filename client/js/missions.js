@@ -19,7 +19,10 @@
         { id: 'dawai', name: 'VED DAWAI DECODER', icon: '💊', tag: 'Medicine Translator', ask: 'Dawai ka naam likho:' },
         { id: 'sarkari', name: 'VED SARKARI SAHAYAK', icon: '📋', tag: 'Form Guide', ask: 'Kaunsa form bharna hai:' },
         { id: 'traffic', name: 'VED TRAFFIC RIGHTS', icon: '🚦', tag: 'Traffic Legal Advisor', ask: 'Police ne kyu roka:' },
-        { id: 'upi', name: 'VED UPI SHIELD', icon: '💸', tag: 'UPI Fraud Detector', ask: 'UPI message paste karo:' }
+        { id: 'upi', name: 'VED UPI SHIELD', icon: '💸', tag: 'UPI Fraud Detector', ask: 'UPI message paste karo:' },
+        { id: 'kisan', name: 'VED KISAN SHIELD', icon: '🌾', tag: 'Kisan ka Digital Bodyguard', ask: 'Fasal ki problem likho:' },
+        { id: 'health', name: 'VED HEALTH SHIELD', icon: '🚑', tag: 'First Aid + Symptom Guide', ask: 'Symptoms likho:' },
+        { id: 'bankfraud', name: 'VED BANK FRAUD SHIELD', icon: '🏦', tag: 'Bank Scam Detector', ask: 'Bank message/call likho:' }
     ];
 
     let missions = FALLBACK;
@@ -45,10 +48,36 @@
     btn.textContent = '🚀';
     btn.style.position = 'fixed';
     btn.style.right = '16px';
-    btn.style.bottom = '28px';
+    btn.style.bottom = '200px';
     btn.style.left = 'auto';
     btn.style.zIndex = '9995';
     document.body.appendChild(btn);
+
+    // Rocket ko heart icon ke theek upar bithao
+    function placeRocket() {
+        const heart = document.querySelector('[id*="health" i], [class*="health" i], [id*="heart" i], [class*="heart" i]');
+        if (heart && heart.getBoundingClientRect) {
+            const r = heart.getBoundingClientRect();
+            if (r.width > 0) {
+                btn.style.right = (window.innerWidth - r.right) + 'px';
+                btn.style.bottom = (window.innerHeight - r.top + 10) + 'px';
+            }
+        }
+    }
+
+    // Purane alag buttons (health/kisan) ko rocket mein merge karo (hide)
+    function mergeButtons() {
+        document.querySelectorAll('button, a, div[role="button"]').forEach(function (b) {
+            const key = ((b.id || '') + ' ' + (b.className || '')).toLowerCase();
+            if (/(health|kisan|farmer|crop)/.test(key) && b.id !== 'missionsBtn') {
+                b.style.display = 'none';
+            }
+        });
+        placeRocket();
+    }
+    setTimeout(mergeButtons, 500);
+    setTimeout(mergeButtons, 1500);
+    window.addEventListener('resize', placeRocket);
 
     const overlay = document.createElement('div');
     overlay.id = 'missionsOverlay';
