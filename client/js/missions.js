@@ -43,6 +43,11 @@
     btn.id = 'missionsBtn';
     btn.title = 'VED Missions';
     btn.textContent = '🚀';
+    btn.style.position = 'fixed';
+    btn.style.right = '16px';
+    btn.style.bottom = '28px';
+    btn.style.left = 'auto';
+    btn.style.zIndex = '9995';
     document.body.appendChild(btn);
 
     const overlay = document.createElement('div');
