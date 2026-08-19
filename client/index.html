@@ -10,6 +10,25 @@
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
     letter-spacing: 0.01em;
   }
+
+  /* 🎬 CINEMATIC TRANSITION — Papa Ji Special */
+  .container h1, .container .tagline, .container .subtitle {
+      max-height: 140px;
+      opacity: 1;
+      overflow: hidden;
+      transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  body.chat-active .container h1,
+  body.chat-active .container .tagline,
+  body.chat-active .container .subtitle {
+      max-height: 0;
+      opacity: 0;
+      margin: 0 !important;
+      padding: 0 !important;
+  }
+  .chat-box {
+      transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -245,6 +264,28 @@
 <script src="js/healthMode.js"></script>
 <script src="js/cropMode.js"></script>
 <script src="js/missions.js?v=101"></script>
+
+<!-- 🎬 CINEMATIC TRANSITION — Papa Ji Special -->
+<script>
+(function () {
+    var input = document.getElementById('userInput');
+    var send = document.getElementById('sendBtn');
+    var box = document.getElementById('chatMessages');
+    var on = false;
+    function activate() {
+        if (on) return;
+        on = true;
+        document.body.classList.add('chat-active');
+    }
+    // Agar purani chat padi hai to seedha chat screen kholo
+    if (box && box.children.length > 1) activate();
+    if (input) {
+        input.addEventListener('input', activate);
+        input.addEventListener('keydown', activate);
+    }
+    if (send) send.addEventListener('click', activate);
+})();
+</script>
 
 </body>
 </html>
