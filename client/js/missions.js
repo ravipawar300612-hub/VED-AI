@@ -25,7 +25,7 @@
         { id: 'bankfraud', name: 'VED BANK FRAUD SHIELD', icon: '🏦', tag: 'Bank Scam Detector', ask: 'Bank message/call likho:' },
         { id: 'raksha', name: 'VED RAKSHA', icon: '🛡️', tag: 'Women Safety & Rights', ask: 'Situation likho:' },
         { id: 'scholar', name: 'VED SCHOLARSHIP RADAR', icon: '🎯', tag: 'Scholarship Finder', ask: 'Class/course + state likho:' },
-        { id: 'rozgar', name: 'VED ROZGAR', icon: '🧑‍💼', tag: 'Resume + Pehli Naukri', ask: 'Qualification + interest likho:' },
+        { id: 'rozgar', name: 'VED ROZGAR', icon: '🧑‍', tag: 'Resume + Pehli Naukri', ask: 'Qualification + interest likho:' },
         { id: 'bima', name: 'VED BIMA SAHAYAK', icon: '📑', tag: 'Insurance Claim Guide', ask: 'Kaunsa claim karna hai:' },
         { id: 'apatkal', name: 'VED APATKAL', icon: '🚨', tag: 'Emergency First-Response', ask: 'Emergency likho:' }
     ];
@@ -72,6 +72,22 @@
     btn.onmouseover = function() { btn.style.transform = 'scale(1.1) rotate(15deg)'; };
     btn.onmouseout = function() { btn.style.transform = 'scale(1) rotate(0deg)'; };
     document.body.appendChild(btn);
+
+    // ==========================================
+    // 🧹 PURANE ALAG BUTTONS HIDE (sab rocket mein)
+    // ==========================================
+    function hideFloaters() {
+        document.querySelectorAll('button, a, div[role="button"]').forEach(function (b) {
+            if (b.id === 'missionsBtn') return;
+            const key = ((b.id || '') + ' ' + (b.className || '')).toLowerCase();
+            if (/(health|heart|suraksha|shield|kyc|scam|kisan|farmer|crop)/.test(key)) {
+                b.style.display = 'none';
+            }
+        });
+    }
+    setTimeout(hideFloaters, 400);
+    setTimeout(hideFloaters, 1200);
+    setTimeout(hideFloaters, 2500);
 
     const overlay = document.createElement('div');
     overlay.id = 'missionsOverlay';
