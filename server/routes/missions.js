@@ -12,7 +12,7 @@ if (!SDK) {
 }
 
 const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY || '';
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 const MISSIONS = {
     prahari: {
