@@ -42,7 +42,7 @@
     }
 
     // ==========================================
-    // 🚀 BULLETPROOF ROCKET — LEFT AUTO FIX
+    // 🚀 ROCKET — UPAR RIGHT CORNER
     // ==========================================
     const btn = document.createElement('button');
     btn.id = 'missionsBtn';
@@ -51,8 +51,8 @@
     btn.style.cssText = `
         position: fixed !important;
         left: auto !important;
-        top: auto !important;
-        bottom: 30px !important;
+        top: 20px !important;
+        bottom: auto !important;
         right: 20px !important;
         width: 60px !important;
         height: 60px !important;
