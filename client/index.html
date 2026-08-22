@@ -212,7 +212,7 @@
 
 <!-- ================= VOICE MODE OVERLAY ================= -->
 <div id="voiceOverlay" data-state="idle">
-    <button id="voiceExitBtn" class="voice-exit-btn" type="button" aria-label="Exit voice mode">✕</button>
+    <button id="voiceExitBtn" class="voice-exit-btn" type="button" aria-label="Exit voice mode">← Back</button>
     <div class="voice-brand">
         <img src="logo.png" alt="VED AI logo">
         <div class="voice-name">VED</div>
@@ -232,7 +232,7 @@
 
 <!-- ================= CAMERA MODE OVERLAY ================= -->
 <div id="cameraOverlay" data-stage="live">
-    <button id="cameraExitBtn" class="camera-exit-btn" type="button" aria-label="Exit camera mode">✕</button>
+    <button id="cameraExitBtn" class="camera-exit-btn" type="button" aria-label="Exit camera mode">← Back</button>
     <div class="camera-frame">
         <video id="cameraVideo" autoplay playsinline muted></video>
         <img id="cameraPreviewImg" alt="Captured photo">
@@ -371,6 +371,37 @@
         if (inp) inp.placeholder = 'Ask anything...';
     })();
 </script>
+
+<!-- 🔙 HUGE CLEAR BACK BUTTON FOR ELDERS -->
+<style>
+    #voiceExitBtn, #cameraExitBtn {
+        position: fixed !important;
+        top: 24px !important;
+        left: 20px !important;
+        width: auto !important;
+        padding: 0 20px 0 16px !important;
+        height: 46px !important;
+        background: rgba(20, 20, 20, 0.85) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: #fff !important;
+        border-radius: 999px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.6) !important;
+        z-index: 999999 !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        cursor: pointer !important;
+        letter-spacing: 0.03em;
+    }
+    #voiceExitBtn:active, #cameraExitBtn:active {
+        transform: scale(0.95);
+    }
+</style>
 
 </body>
 </html>
