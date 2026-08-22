@@ -473,5 +473,27 @@
     });
 })();
 </script>
+<!-- ⚡ LIGHTNING LOADING — Sayali Special -->
+<script>
+(function () {
+    var ls = document.getElementById('loading-screen');
+    var fast = false;
+    try { fast = !!sessionStorage.getItem('ved_loaded'); } catch (e) {}
+
+    function kill() {
+        if (ls) ls.style.display = 'none';
+        try { sessionStorage.setItem('ved_loaded', '1'); } catch (e) {}
+    }
+
+    if (fast) {
+        // Repeat visit = ZERO loading, seedha app khulo
+        kill();
+    } else {
+        // First visit = max 2.2 sec, ya tap karke skip
+        setTimeout(kill, 2200);
+        if (ls) ls.addEventListener('click', kill);
+    }
+})();
+</script>
 </body>
 </html>
