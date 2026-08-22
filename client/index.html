@@ -26,9 +26,7 @@
             margin: 0 !important;
             padding: 0 !important;
         }
-        .chat-box {
-            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .chat-box { transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -45,7 +43,6 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -60,49 +57,20 @@
     <link rel="stylesheet" href="css/suraksha.css?v=71">
     <link rel="stylesheet" href="css/missions.css?v=71">
 
-    <!-- FINAL SCREEN FIX: full height + no cut -->
+    <!-- FINAL SCREEN FIX -->
     <style>
-        html {
-            background: #0b0f14;
-            -webkit-text-size-adjust: 100%;
-            text-size-adjust: 100%;
-        }
+        html { background: #0b0f14; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100%;
-            max-width: 100vw;
-            height: 100%;
-            height: 100dvh;
+            margin: 0 !important; padding: 0 !important;
+            width: 100%; max-width: 100vw;
+            height: 100%; height: 100dvh;
             overflow: hidden !important;
         }
-        .app {
-            width: 100%;
-            max-width: 100vw;
-            height: 100%;
-            height: 100dvh;
-            background: transparent !important;
-            overflow: hidden;
-        }
-        .main {
-            flex: 1;
-            min-width: 0;
-            height: 100%;
-        }
-        .container {
-            width: 100%;
-            height: 100%;
-            min-height: 0;
-        }
-        .chat-box {
-            flex: 1;
-            min-height: 0;
-            max-width: 100%;
-            overflow-y: auto;
-        }
-        #userInput {
-            min-width: 0;
-        }
+        .app { width: 100%; max-width: 100vw; height: 100%; height: 100dvh; background: transparent !important; overflow: hidden; }
+        .main { flex: 1; min-width: 0; height: 100%; }
+        .container { width: 100%; height: 100%; min-height: 0; }
+        .chat-box { flex: 1; min-height: 0; max-width: 100%; overflow-y: auto; }
+        #userInput { min-width: 0; }
     </style>
 </head>
 
@@ -144,25 +112,19 @@
                     <path d="M15 12H3"/>
                 </svg>
             </a>
-            <button id="sidebarCollapseBtn" class="sb-collapse-btn" type="button" aria-label="Collapse sidebar">
-                &#10094;
-            </button>
+            <button id="sidebarCollapseBtn" class="sb-collapse-btn" type="button" aria-label="Collapse sidebar">&#10094;</button>
         </div>
-
         <div class="sb-newchat-wrap">
             <button id="newChatBtn" type="button" title="New chat">
                 <span>+</span>
                 <span class="sb-btn-label">New chat</span>
             </button>
         </div>
-
         <div class="sb-search-wrap">
             <span class="sb-search-icon">&#128269;</span>
             <input type="text" id="sidebarSearchInput" placeholder="Search conversations..." autocomplete="off">
         </div>
-
         <div id="sidebarGroups" class="sb-groups"></div>
-
         <div class="sb-footer">Sayali P. R. Pawar</div>
     </div>
 
@@ -172,16 +134,13 @@
             <h1>VED AI</h1>
             <p class="tagline">Your Intelligent AI Companion</p>
             <p class="subtitle">Founded by Sayali P. R. Pawar</p>
-
             <div id="chatMessages" class="chat-box">
                 <div class="bot-message">
                     <b>Welcome to VED AI</b><br><br>
                     Ask me anything.
                 </div>
             </div>
-
             <div id="attachmentPreview" class="attachment-preview"></div>
-
             <div class="input-area">
                 <input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx,.txt" hidden>
                 <button id="attachBtn" class="icon-btn" type="button" aria-label="Attach files">
@@ -266,46 +225,34 @@
 <script src="js/cropMode.js"></script>
 <script src="js/missions.js?v=101"></script>
 
-<!-- 🎬 CINEMATIC TRANSITION — Papa Ji Special -->
+<!-- 🎬 CINEMATIC TRANSITION -->
 <script>
 (function () {
     var input = document.getElementById('userInput');
     var send = document.getElementById('sendBtn');
     var box = document.getElementById('chatMessages');
     var on = false;
-    function activate() {
-        if (on) return;
-        on = true;
-        document.body.classList.add('chat-active');
-    }
+    function activate() { if (on) return; on = true; document.body.classList.add('chat-active'); }
     if (box && box.children.length > 1) activate();
-    if (input) {
-        input.addEventListener('input', activate);
-        input.addEventListener('keydown', activate);
-    }
+    if (input) { input.addEventListener('input', activate); input.addEventListener('keydown', activate); }
     if (send) send.addEventListener('click', activate);
 })();
 </script>
 
-<!-- 🫧 CHATGPT-STYLE PREMIUM PILL WITH GLASS EFFECT -->
+<!-- 🫧 PREMIUM GLASS PILL -->
 <style>
     .container { display: flex; flex-direction: column; }
     body:not(.chat-active) .container { justify-content: center; }
     body:not(.chat-active) #chatMessages { display: none; }
-
     .input-area {
-        display: flex !important;
-        align-items: center !important;
-        gap: 4px !important;
+        display: flex !important; align-items: center !important; gap: 4px !important;
         background: rgba(23, 28, 35, 0.85) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.18) !important;
         border-radius: 999px !important;
         padding: 6px 6px 6px 14px !important;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
-        max-width: 780px !important;
-        width: 100% !important;
+        max-width: 780px !important; width: 100% !important;
         margin: 14px auto 12px !important;
     }
     #attachBtn { order: 0; }
@@ -314,111 +261,66 @@
     #micBtn { order: 3; }
     #sendBtn { order: 4; }
     #userInput {
-        flex: 1 !important;
-        min-width: 0;
-        background: transparent !important;
-        border: none !important;
-        outline: none !important;
-        box-shadow: none !important;
-        color: #eef2f6 !important;
-        font-size: 16px !important;
-        padding: 10px 6px !important;
-        border-radius: 0 !important;
+        flex: 1 !important; min-width: 0;
+        background: transparent !important; border: none !important;
+        outline: none !important; box-shadow: none !important;
+        color: #eef2f6 !important; font-size: 16px !important;
+        padding: 10px 6px !important; border-radius: 0 !important;
     }
-    #userInput::placeholder {
-        color: #9aa4b2;
-        letter-spacing: 0.02em;
-    }
+    #userInput::placeholder { color: #9aa4b2; letter-spacing: 0.02em; }
     .input-area .icon-btn {
-        background: transparent !important;
-        border: none !important;
-        width: 38px !important;
-        height: 38px !important;
-        border-radius: 50% !important;
-        color: #aeb7c4 !important;
+        background: transparent !important; border: none !important;
+        width: 38px !important; height: 38px !important;
+        border-radius: 50% !important; color: #aeb7c4 !important;
         flex: 0 0 auto;
     }
-    .input-area .icon-btn:hover {
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: #ffffff !important;
-    }
+    .input-area .icon-btn:hover { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; }
     #sendBtn {
-        width: 40px !important;
-        height: 40px !important;
-        border-radius: 50% !important;
-        border: none !important;
+        width: 40px !important; height: 40px !important;
+        border-radius: 50% !important; border: none !important;
         background: linear-gradient(135deg, #ff6b6b, #ee2b5b) !important;
-        color: transparent !important;
-        font-size: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        flex: 0 0 auto;
-        cursor: pointer;
+        color: transparent !important; font-size: 0 !important;
+        display: flex !important; align-items: center !important;
+        justify-content: center !important; flex: 0 0 auto; cursor: pointer;
     }
-    #sendBtn::before {
-        content: "↑";
-        font-size: 20px;
-        font-weight: 700;
-        color: #fff;
-    }
+    #sendBtn::before { content: "↑"; font-size: 20px; font-weight: 700; color: #fff; }
     #sendBtn:hover { filter: brightness(1.1); }
 </style>
-
 <script>
-    (function () {
-        var inp = document.getElementById('userInput');
-        if (inp) inp.placeholder = 'Ask anything...';
-    })();
+    (function () { var inp = document.getElementById('userInput'); if (inp) inp.placeholder = 'Ask anything...'; })();
 </script>
 
-<!-- 🔙 HUGE CLEAR BACK BUTTON FOR ELDERS -->
-<!-- 🔙 BACK BUTTON NUCLEAR FIX (Sayali Special) -->
-<!-- 🫧 PREMIUM GLASS BACK BUTTON + FORCE EXIT FIX -->
+<!-- 🔙 GLASS BACK BUTTON + FORCE EXIT -->
 <style>
     #voiceExitBtn, #cameraExitBtn {
-        position: fixed !important;
-        top: 18px !important;
-        left: 16px !important;
-        width: auto !important;
-        height: 44px !important;
-        padding: 0 18px !important;
+        position: fixed !important; top: 18px !important; left: 16px !important;
+        width: auto !important; height: 44px !important; padding: 0 18px !important;
         background: rgba(15, 18, 24, 0.75) !important;
-        backdrop-filter: blur(14px) !important;
-        -webkit-backdrop-filter: blur(14px) !important;
+        backdrop-filter: blur(14px) !important; -webkit-backdrop-filter: blur(14px) !important;
         color: #eef2f6 !important;
         border: 1px solid rgba(255, 255, 255, 0.22) !important;
         border-radius: 999px !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
+        font-size: 15px !important; font-weight: 600 !important;
         letter-spacing: 0.02em !important;
-        display: flex !important;
-        align-items: center !important;
+        display: flex !important; align-items: center !important;
         justify-content: center !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-        transform: none !important;
+        opacity: 1 !important; visibility: visible !important;
+        pointer-events: auto !important; transform: none !important;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
-        z-index: 2147483647 !important;
-        cursor: pointer !important;
+        z-index: 2147483647 !important; cursor: pointer !important;
     }
     #voiceExitBtn:active, #cameraExitBtn:active {
         transform: scale(0.94) !important;
         background: rgba(255, 255, 255, 0.15) !important;
     }
 </style>
-
 <script>
 (function () {
-    // FORCE EXIT — chahe camera ka JS roye ya chup rahe, button hamesha kaam karega
     function exitCamera() {
         var o = document.getElementById('cameraOverlay');
         if (o) { o.style.display = 'none'; o.setAttribute('data-stage', 'idle'); }
-        try {
-            var v = document.getElementById('cameraVideo');
-            if (v && v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.srcObject = null; }
-        } catch (e) {}
+        try { var v = document.getElementById('cameraVideo');
+            if (v && v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.srcObject = null; } } catch (e) {}
         document.body.classList.remove('camera-active');
     }
     function exitVoice() {
@@ -427,73 +329,88 @@
         document.body.classList.remove('voice-active');
     }
     document.addEventListener('click', function (e) {
-        var t = e.target;
-        if (!t || !t.closest) return;
+        var t = e.target; if (!t || !t.closest) return;
         if (t.closest('#cameraExitBtn')) exitCamera();
         if (t.closest('#voiceExitBtn')) exitVoice();
-        // Dobara kholne par inline display hat jaye
         if (t.closest('#cameraBtn')) { var c = document.getElementById('cameraOverlay'); if (c) c.style.display = ''; }
         if (t.closest('#micBtn')) { var vo = document.getElementById('voiceOverlay'); if (vo) vo.style.display = ''; }
     }, true);
 })();
 </script>
-<!-- 🎬 CINEMA FOCUS MODE — Wallpaper → Black (Papa Ji + Sayali Special) -->
+
+<!-- 🎬 CINEMA FOCUS MODE — Wallpaper → Black -->
 <style>
     .app { position: relative; z-index: 2; }
     body::after {
-        content: "";
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: #000000;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.8s ease;
-        z-index: 1;
+        content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: #000000; opacity: 0; pointer-events: none;
+        transition: opacity 0.8s ease; z-index: 1;
     }
     body.chat-active::after { opacity: 1; }
-    body.chat-active {
-        background-image: none !important;
-        background-color: #000000 !important;
-    }
-    body.chat-active .main,
-    body.chat-active .container { color: #ffffff; }
+    body.chat-active { background-image: none !important; background-color: #000000 !important; }
+    body.chat-active .main, body.chat-active .container { color: #ffffff; }
 </style>
-
 <script>
 (function () {
-    // New chat par wapas wallpaper landing
     var nc = document.getElementById('newChatBtn');
     var box = document.getElementById('chatMessages');
     if (nc) nc.addEventListener('click', function () {
         setTimeout(function () {
-            if (box && box.children.length <= 1) {
-                document.body.classList.remove('chat-active');
-            }
+            if (box && box.children.length <= 1) document.body.classList.remove('chat-active');
         }, 300);
     });
 })();
 </script>
-<!-- ⚡ LIGHTNING LOADING — Sayali Special -->
+
+<!-- 🎬 NETFLIX-STYLE "SKIP INTRO →" ON LOADING SCREEN -->
+<style>
+    #vedSkipBtn {
+        position: absolute;
+        bottom: 30px;
+        right: 24px;
+        z-index: 1000000;
+        padding: 11px 24px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        opacity: 0;
+        animation: vedSkipFade 0.8s ease 0.6s forwards;
+    }
+    #vedSkipBtn:active {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.25);
+    }
+    @keyframes vedSkipFade {
+        to { opacity: 1; }
+    }
+</style>
 <script>
 (function () {
     var ls = document.getElementById('loading-screen');
-    var fast = false;
-    try { fast = !!sessionStorage.getItem('ved_loaded'); } catch (e) {}
+    if (!ls) return;
 
-    function kill() {
-        if (ls) ls.style.display = 'none';
-        try { sessionStorage.setItem('ved_loaded', '1'); } catch (e) {}
-    }
+    // Skip Intro button inject karo
+    var b = document.createElement('button');
+    b.id = 'vedSkipBtn';
+    b.type = 'button';
+    b.innerHTML = 'Skip Intro →';
+    ls.appendChild(b);
 
-    if (fast) {
-        // Repeat visit = ZERO loading, seedha app khulo
-        kill();
-    } else {
-        // First visit = max 2.2 sec, ya tap karke skip
-        setTimeout(kill, 2200);
-        if (ls) ls.addEventListener('click', kill);
-    }
+    function killLoading() { ls.style.display = 'none'; }
+
+    b.addEventListener('click', function (e) { e.stopPropagation(); killLoading(); });
+
+    // Auto-hide after 4 seconds (branding fully dikhne de)
+    setTimeout(killLoading, 4000);
 })();
 </script>
+
 </body>
 </html>
