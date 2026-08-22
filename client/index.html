@@ -287,5 +287,80 @@
 })();
 </script>
 
+<!-- 🫧 CHATGPT-STYLE PREMIUM LOOK (Sayali Special) -->
+<style>
+    .container { display: flex; flex-direction: column; }
+    /* Landing par heading + pill BEECH mein — bilkul ChatGPT jaisa */
+    body:not(.chat-active) .container { justify-content: center; }
+    body:not(.chat-active) #chatMessages { display: none; }
+
+    .input-area {
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        background: #171c23 !important;
+        border: 1px solid rgba(255,255,255,0.14) !important;
+        border-radius: 999px !important;
+        padding: 6px 6px 6px 14px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.45) !important;
+        max-width: 780px !important;
+        width: 100% !important;
+        margin: 14px auto 12px !important;
+    }
+    #attachBtn { order: 0; }
+    #userInput { order: 1; }
+    #cameraBtn { order: 2; }
+    #micBtn { order: 3; }
+    #sendBtn { order: 4; }
+    #userInput {
+        flex: 1 !important;
+        min-width: 0;
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        color: #eef2f6 !important;
+        font-size: 15px !important;
+        padding: 10px 6px !important;
+        border-radius: 0 !important;
+    }
+    #userInput::placeholder { color: #8b95a3; }
+    .input-area .icon-btn {
+        background: transparent !important;
+        border: none !important;
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 50% !important;
+        color: #aeb7c4 !important;
+        flex: 0 0 auto;
+    }
+    .input-area .icon-btn:hover {
+        background: rgba(255,255,255,0.08) !important;
+        color: #ffffff !important;
+    }
+    #sendBtn {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 50% !important;
+        border: none !important;
+        background: linear-gradient(135deg, #ff6b6b, #ee2b5b) !important;
+        color: transparent !important;
+        font-size: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex: 0 0 auto;
+        cursor: pointer;
+    }
+    #sendBtn::before { content: "↑"; font-size: 20px; font-weight: 700; color: #fff; }
+    #sendBtn:hover { filter: brightness(1.1); }
+</style>
+<script>
+    (function () {
+        var inp = document.getElementById('userInput');
+        if (inp) inp.placeholder = 'VED se kuch bhi pucho...';
+    })();
+</script>
+
 </body>
 </html>
