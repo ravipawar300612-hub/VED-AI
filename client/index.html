@@ -10,28 +10,19 @@
             font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
             letter-spacing: 0.01em;
         }
-
         /* 🎬 CINEMATIC TRANSITION — Papa Ji Special */
         .container h1, .container .tagline, .container .subtitle {
-            max-height: 140px;
-            opacity: 1;
-            overflow: hidden;
+            max-height: 140px; opacity: 1; overflow: hidden;
             transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        body.chat-active .container h1,
-        body.chat-active .container .tagline,
-        body.chat-active .container .subtitle {
-            max-height: 0;
-            opacity: 0;
-            margin: 0 !important;
-            padding: 0 !important;
+        body.chat-active .container h1, body.chat-active .container .tagline, body.chat-active .container .subtitle {
+            max-height: 0; opacity: 0; margin: 0 !important; padding: 0 !important;
         }
         .chat-box { transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- PWA META TAGS -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -47,7 +38,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-    <!-- CSS FILES -->
     <link rel="stylesheet" href="style.css?v=71">
     <link rel="stylesheet" href="css/voice-mode.css?v=71">
     <link rel="stylesheet" href="css/camera-mode.css?v=71">
@@ -57,15 +47,9 @@
     <link rel="stylesheet" href="css/suraksha.css?v=71">
     <link rel="stylesheet" href="css/missions.css?v=71">
 
-    <!-- FINAL SCREEN FIX -->
     <style>
         html { background: #0b0f14; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-        html, body {
-            margin: 0 !important; padding: 0 !important;
-            width: 100%; max-width: 100vw;
-            height: 100%; height: 100dvh;
-            overflow: hidden !important;
-        }
+        html, body { margin: 0 !important; padding: 0 !important; width: 100%; max-width: 100vw; height: 100%; height: 100dvh; overflow: hidden !important; }
         .app { width: 100%; max-width: 100vw; height: 100%; height: 100dvh; background: transparent !important; overflow: hidden; }
         .main { flex: 1; min-width: 0; height: 100%; }
         .container { width: 100%; height: 100%; min-height: 0; }
@@ -86,39 +70,64 @@
         <div class="progress-container"><div id="progress-bar"></div></div>
         <p id="quote">Every intelligent system starts with a single thought.</p>
     </div>
+    
+    <!-- 🎬 NETFLIX SKIP INTRO BUTTON (HARDCODED INSIDE) -->
+    <button id="vedSkipBtn" type="button">Skip Intro →</button>
 </div>
 
-<!-- 📱 MOBILE HAMBURGER BUTTON + BACKDROP -->
+<style>
+    #loading-screen { position: relative; }
+    #vedSkipBtn {
+        position: absolute !important;
+        bottom: 30px !important;
+        right: 24px !important;
+        z-index: 99999999 !important;
+        padding: 12px 26px !important;
+        border-radius: 999px !important;
+        border: 2px solid rgba(255, 255, 255, 0.5) !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        color: #ffffff !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.05em !important;
+        cursor: pointer !important;
+        opacity: 0;
+        animation: vedSkipFadeIn 0.8s ease 0.5s forwards;
+    }
+    #vedSkipBtn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.3); }
+    @keyframes vedSkipFadeIn { to { opacity: 1; } }
+</style>
+<script>
+    document.getElementById('vedSkipBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('loading-screen').style.display = 'none';
+    });
+</script>
+
 <button id="mobileMenuBtn" aria-label="Open menu">☰</button>
 <div id="mobileBackdrop"></div>
 
 <div class="app">
-
-    <!-- ================= SIDEBAR ================= -->
     <div class="sidebar">
         <div class="sb-header">
             <img src="logo.png" class="logo" alt="VED Logo">
             <span class="sb-wordmark">VED AI</span>
             <button id="wakeWordToggleBtn" class="sb-collapse-btn" type="button" aria-label="Toggle Hey VED wake word" title="Hey VED — hands-free voice">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/>
-                    <path d="M19 11a7 7 0 0 1-14 0"/>
+                    <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/>
                 </svg>
             </button>
             <a href="login.html" class="sb-collapse-btn" aria-label="Login" style="text-decoration:none;">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                    <path d="M10 17l5-5-5-5"/>
-                    <path d="M15 12H3"/>
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>
                 </svg>
             </a>
             <button id="sidebarCollapseBtn" class="sb-collapse-btn" type="button" aria-label="Collapse sidebar">&#10094;</button>
         </div>
         <div class="sb-newchat-wrap">
-            <button id="newChatBtn" type="button" title="New chat">
-                <span>+</span>
-                <span class="sb-btn-label">New chat</span>
-            </button>
+            <button id="newChatBtn" type="button" title="New chat"><span>+</span><span class="sb-btn-label">New chat</span></button>
         </div>
         <div class="sb-search-wrap">
             <span class="sb-search-icon">&#128269;</span>
@@ -128,39 +137,25 @@
         <div class="sb-footer">Sayali P. R. Pawar</div>
     </div>
 
-    <!-- ================= MAIN ================= -->
     <div class="main">
         <div class="container">
             <h1>VED AI</h1>
             <p class="tagline">Your Intelligent AI Companion</p>
             <p class="subtitle">Founded by Sayali P. R. Pawar</p>
             <div id="chatMessages" class="chat-box">
-                <div class="bot-message">
-                    <b>Welcome to VED AI</b><br><br>
-                    Ask me anything.
-                </div>
+                <div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>
             </div>
             <div id="attachmentPreview" class="attachment-preview"></div>
             <div class="input-area">
                 <input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx,.txt" hidden>
                 <button id="attachBtn" class="icon-btn" type="button" aria-label="Attach files">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 11.5 12.4 20a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-7.8 7.8a2 2 0 0 1-3-3l7.2-7.1"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5 12.4 20a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-7.8 7.8a2 2 0 0 1-3-3l7.2-7.1"/></svg>
                 </button>
                 <button id="cameraBtn" class="icon-btn" type="button" aria-label="Camera mode">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 8a2 2 0 0 1 2-2h1.2l.9-1.4A2 2 0 0 1 9.8 3.6h4.4a2 2 0 0 1 1.7 1L16.8 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/>
-                        <circle cx="12" cy="12.5" r="3.4"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h1.2l.9-1.4A2 2 0 0 1 9.8 3.6h4.4a2 2 0 0 1 1.7 1L16.8 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><circle cx="12" cy="12.5" r="3.4"/></svg>
                 </button>
                 <button id="micBtn" class="icon-btn mic-btn" type="button" aria-label="Voice mode">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/>
-                        <path d="M19 11a7 7 0 0 1-14 0"/>
-                        <line x1="12" y1="18" x2="12" y2="22"/>
-                        <line x1="8" y1="22" x2="16" y2="22"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
                 </button>
                 <input type="text" id="userInput" placeholder="Message VED AI..." autocomplete="off">
                 <button id="sendBtn" type="button">Send</button>
@@ -169,36 +164,19 @@
     </div>
 </div>
 
-<!-- ================= VOICE MODE OVERLAY ================= -->
 <div id="voiceOverlay" data-state="idle">
     <button id="voiceExitBtn" class="voice-exit-btn" type="button" aria-label="Exit voice mode">← Back</button>
-    <div class="voice-brand">
-        <img src="logo.png" alt="VED AI logo">
-        <div class="voice-name">VED</div>
-    </div>
-    <div class="orb-wrap">
-        <div class="orb-ring"></div>
-        <div class="orb-ring"></div>
-        <div class="orb-ring"></div>
-        <div class="orb-core"></div>
-    </div>
-    <div id="voiceWaveform" class="voice-waveform">
-        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-    </div>
+    <div class="voice-brand"><img src="logo.png" alt="VED AI logo"><div class="voice-name">VED</div></div>
+    <div class="orb-wrap"><div class="orb-ring"></div><div class="orb-ring"></div><div class="orb-ring"></div><div class="orb-core"></div></div>
+    <div id="voiceWaveform" class="voice-waveform"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <div id="voiceStatus" class="voice-status">Idle</div>
     <div id="voiceTranscript" class="voice-transcript"></div>
 </div>
 
-<!-- ================= CAMERA MODE OVERLAY ================= -->
 <div id="cameraOverlay" data-stage="live">
     <button id="cameraExitBtn" class="camera-exit-btn" type="button" aria-label="Exit camera mode">← Back</button>
-    <div class="camera-frame">
-        <video id="cameraVideo" autoplay playsinline muted></video>
-        <img id="cameraPreviewImg" alt="Captured photo">
-    </div>
-    <div class="camera-controls">
-        <button id="cameraCaptureBtn" type="button" aria-label="Capture photo"></button>
-    </div>
+    <div class="camera-frame"><video id="cameraVideo" autoplay playsinline muted></video><img id="cameraPreviewImg" alt="Captured photo"></div>
+    <div class="camera-controls"><button id="cameraCaptureBtn" type="button" aria-label="Capture photo"></button></div>
     <div class="camera-review-controls">
         <input type="text" id="cameraQuestionInput" placeholder="Ask VED about this photo..." autocomplete="off">
         <div style="display:flex; gap:12px;">
@@ -209,7 +187,6 @@
     <div id="cameraStatus" class="camera-status"></div>
 </div>
 
-<!-- Scripts -->
 <script src="js/authGuard.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/speechEngine.js"></script>
@@ -225,7 +202,6 @@
 <script src="js/cropMode.js"></script>
 <script src="js/missions.js?v=101"></script>
 
-<!-- 🎬 CINEMATIC TRANSITION -->
 <script>
 (function () {
     var input = document.getElementById('userInput');
@@ -239,49 +215,34 @@
 })();
 </script>
 
-<!-- 🫧 PREMIUM GLASS PILL -->
 <style>
     .container { display: flex; flex-direction: column; }
     body:not(.chat-active) .container { justify-content: center; }
     body:not(.chat-active) #chatMessages { display: none; }
     .input-area {
         display: flex !important; align-items: center !important; gap: 4px !important;
-        background: rgba(23, 28, 35, 0.85) !important;
-        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.18) !important;
-        border-radius: 999px !important;
-        padding: 6px 6px 6px 14px !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
-        max-width: 780px !important; width: 100% !important;
-        margin: 14px auto 12px !important;
+        background: rgba(23, 28, 35, 0.85) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.18) !important; border-radius: 999px !important;
+        padding: 6px 6px 6px 14px !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+        max-width: 780px !important; width: 100% !important; margin: 14px auto 12px !important;
     }
-    #attachBtn { order: 0; }
-    #userInput { order: 1; }
-    #cameraBtn { order: 2; }
-    #micBtn { order: 3; }
-    #sendBtn { order: 4; }
+    #attachBtn { order: 0; } #userInput { order: 1; } #cameraBtn { order: 2; } #micBtn { order: 3; } #sendBtn { order: 4; }
     #userInput {
-        flex: 1 !important; min-width: 0;
-        background: transparent !important; border: none !important;
-        outline: none !important; box-shadow: none !important;
-        color: #eef2f6 !important; font-size: 16px !important;
-        padding: 10px 6px !important; border-radius: 0 !important;
+        flex: 1 !important; min-width: 0; background: transparent !important; border: none !important;
+        outline: none !important; box-shadow: none !important; color: #eef2f6 !important;
+        font-size: 16px !important; padding: 10px 6px !important; border-radius: 0 !important;
     }
     #userInput::placeholder { color: #9aa4b2; letter-spacing: 0.02em; }
     .input-area .icon-btn {
-        background: transparent !important; border: none !important;
-        width: 38px !important; height: 38px !important;
-        border-radius: 50% !important; color: #aeb7c4 !important;
-        flex: 0 0 auto;
+        background: transparent !important; border: none !important; width: 38px !important; height: 38px !important;
+        border-radius: 50% !important; color: #aeb7c4 !important; flex: 0 0 auto;
     }
     .input-area .icon-btn:hover { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; }
     #sendBtn {
-        width: 40px !important; height: 40px !important;
-        border-radius: 50% !important; border: none !important;
-        background: linear-gradient(135deg, #ff6b6b, #ee2b5b) !important;
-        color: transparent !important; font-size: 0 !important;
-        display: flex !important; align-items: center !important;
-        justify-content: center !important; flex: 0 0 auto; cursor: pointer;
+        width: 40px !important; height: 40px !important; border-radius: 50% !important; border: none !important;
+        background: linear-gradient(135deg, #ff6b6b, #ee2b5b) !important; color: transparent !important;
+        font-size: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important;
+        flex: 0 0 auto; cursor: pointer;
     }
     #sendBtn::before { content: "↑"; font-size: 20px; font-weight: 700; color: #fff; }
     #sendBtn:hover { filter: brightness(1.1); }
@@ -290,29 +251,19 @@
     (function () { var inp = document.getElementById('userInput'); if (inp) inp.placeholder = 'Ask anything...'; })();
 </script>
 
-<!-- 🔙 GLASS BACK BUTTON + FORCE EXIT -->
 <style>
     #voiceExitBtn, #cameraExitBtn {
-        position: fixed !important; top: 18px !important; left: 16px !important;
-        width: auto !important; height: 44px !important; padding: 0 18px !important;
-        background: rgba(15, 18, 24, 0.75) !important;
-        backdrop-filter: blur(14px) !important; -webkit-backdrop-filter: blur(14px) !important;
-        color: #eef2f6 !important;
-        border: 1px solid rgba(255, 255, 255, 0.22) !important;
-        border-radius: 999px !important;
-        font-size: 15px !important; font-weight: 600 !important;
-        letter-spacing: 0.02em !important;
-        display: flex !important; align-items: center !important;
-        justify-content: center !important;
-        opacity: 1 !important; visibility: visible !important;
-        pointer-events: auto !important; transform: none !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+        position: fixed !important; top: 18px !important; left: 16px !important; width: auto !important;
+        height: 44px !important; padding: 0 18px !important; background: rgba(15, 18, 24, 0.75) !important;
+        backdrop-filter: blur(14px) !important; -webkit-backdrop-filter: blur(14px) !important; color: #eef2f6 !important;
+        border: 1px solid rgba(255, 255, 255, 0.22) !important; border-radius: 999px !important;
+        font-size: 15px !important; font-weight: 600 !important; letter-spacing: 0.02em !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
+        opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
+        transform: none !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
         z-index: 2147483647 !important; cursor: pointer !important;
     }
-    #voiceExitBtn:active, #cameraExitBtn:active {
-        transform: scale(0.94) !important;
-        background: rgba(255, 255, 255, 0.15) !important;
-    }
+    #voiceExitBtn:active, #cameraExitBtn:active { transform: scale(0.94) !important; background: rgba(255, 255, 255, 0.15) !important; }
 </style>
 <script>
 (function () {
@@ -338,13 +289,11 @@
 })();
 </script>
 
-<!-- 🎬 CINEMA FOCUS MODE — Wallpaper → Black -->
 <style>
     .app { position: relative; z-index: 2; }
     body::after {
         content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: #000000; opacity: 0; pointer-events: none;
-        transition: opacity 0.8s ease; z-index: 1;
+        background: #000000; opacity: 0; pointer-events: none; transition: opacity 0.8s ease; z-index: 1;
     }
     body.chat-active::after { opacity: 1; }
     body.chat-active { background-image: none !important; background-color: #000000 !important; }
@@ -359,56 +308,6 @@
             if (box && box.children.length <= 1) document.body.classList.remove('chat-active');
         }, 300);
     });
-})();
-</script>
-
-<!-- 🎬 NETFLIX-STYLE "SKIP INTRO →" ON LOADING SCREEN -->
-<style>
-    #vedSkipBtn {
-        position: absolute;
-        bottom: 30px;
-        right: 24px;
-        z-index: 1000000;
-        padding: 11px 24px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        background: rgba(255, 255, 255, 0.12);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        color: #ffffff;
-        font-size: 14px;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        cursor: pointer;
-        opacity: 0;
-        animation: vedSkipFade 0.8s ease 0.6s forwards;
-    }
-    #vedSkipBtn:active {
-        transform: scale(0.95);
-        background: rgba(255, 255, 255, 0.25);
-    }
-    @keyframes vedSkipFade {
-        to { opacity: 1; }
-    }
-</style>
-<script>
-(function () {
-    var ls = document.getElementById('loading-screen');
-    if (!ls) return;
-
-    // Skip Intro button inject karo
-    var b = document.createElement('button');
-    b.id = 'vedSkipBtn';
-    b.type = 'button';
-    b.innerHTML = 'Skip Intro →';
-    ls.appendChild(b);
-
-    function killLoading() { ls.style.display = 'none'; }
-
-    b.addEventListener('click', function (e) { e.stopPropagation(); killLoading(); });
-
-    // Auto-hide after 4 seconds (branding fully dikhne de)
-    setTimeout(killLoading, 4000);
 })();
 </script>
 
