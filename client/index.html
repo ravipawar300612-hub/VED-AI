@@ -374,20 +374,24 @@
 
 <!-- 🔙 HUGE CLEAR BACK BUTTON FOR ELDERS -->
 <!-- 🔙 BACK BUTTON NUCLEAR FIX (Sayali Special) -->
+<!-- 🫧 PREMIUM GLASS BACK BUTTON + FORCE EXIT FIX -->
 <style>
     #voiceExitBtn, #cameraExitBtn {
         position: fixed !important;
-        top: 20px !important;
+        top: 18px !important;
         left: 16px !important;
         width: auto !important;
-        height: 48px !important;
-        padding: 0 22px !important;
-        background: #ff3b3b !important;
-        color: #ffffff !important;
-        border: none !important;
+        height: 44px !important;
+        padding: 0 18px !important;
+        background: rgba(15, 18, 24, 0.75) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        color: #eef2f6 !important;
+        border: 1px solid rgba(255, 255, 255, 0.22) !important;
         border-radius: 999px !important;
-        font-size: 17px !important;
-        font-weight: 700 !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -395,10 +399,43 @@
         visibility: visible !important;
         pointer-events: auto !important;
         transform: none !important;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.6) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
         z-index: 2147483647 !important;
         cursor: pointer !important;
     }
+    #voiceExitBtn:active, #cameraExitBtn:active {
+        transform: scale(0.94) !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
 </style>
+
+<script>
+(function () {
+    // FORCE EXIT — chahe camera ka JS roye ya chup rahe, button hamesha kaam karega
+    function exitCamera() {
+        var o = document.getElementById('cameraOverlay');
+        if (o) { o.style.display = 'none'; o.setAttribute('data-stage', 'idle'); }
+        try {
+            var v = document.getElementById('cameraVideo');
+            if (v && v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.srcObject = null; }
+        } catch (e) {}
+        document.body.classList.remove('camera-active');
+    }
+    function exitVoice() {
+        var o = document.getElementById('voiceOverlay');
+        if (o) { o.style.display = 'none'; o.setAttribute('data-state', 'idle'); }
+        document.body.classList.remove('voice-active');
+    }
+    document.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('#cameraExitBtn')) exitCamera();
+        if (t.closest('#voiceExitBtn')) exitVoice();
+        // Dobara kholne par inline display hat jaye
+        if (t.closest('#cameraBtn')) { var c = document.getElementById('cameraOverlay'); if (c) c.style.display = ''; }
+        if (t.closest('#micBtn')) { var vo = document.getElementById('voiceOverlay'); if (vo) vo.style.display = ''; }
+    }, true);
+})();
+</script>
 </body>
 </html>
