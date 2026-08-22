@@ -437,5 +437,41 @@
     }, true);
 })();
 </script>
+<!-- 🎬 CINEMA FOCUS MODE — Wallpaper → Black (Papa Ji + Sayali Special) -->
+<style>
+    .app { position: relative; z-index: 2; }
+    body::after {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: #000000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.8s ease;
+        z-index: 1;
+    }
+    body.chat-active::after { opacity: 1; }
+    body.chat-active {
+        background-image: none !important;
+        background-color: #000000 !important;
+    }
+    body.chat-active .main,
+    body.chat-active .container { color: #ffffff; }
+</style>
+
+<script>
+(function () {
+    // New chat par wapas wallpaper landing
+    var nc = document.getElementById('newChatBtn');
+    var box = document.getElementById('chatMessages');
+    if (nc) nc.addEventListener('click', function () {
+        setTimeout(function () {
+            if (box && box.children.length <= 1) {
+                document.body.classList.remove('chat-active');
+            }
+        }, 300);
+    });
+})();
+</script>
 </body>
 </html>
