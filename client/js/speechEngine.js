@@ -207,7 +207,7 @@ const SpeechEngine = (function () {
         const utterance = new SpeechSynthesisUtterance(text);
         const voice = pickBestVoice();
         if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
-        else utterance.lang = "hi-IN";
+        else utterance.lang = "en-US";
         utterance.rate = 1;
         utterance.pitch = 1;
         utterance.volume = 1;
@@ -221,8 +221,8 @@ const SpeechEngine = (function () {
         const voices = window.speechSynthesis.getVoices();
         if (!voices.length) return null;
         return (
-            voices.find(v => v.lang === "hi-IN") ||
             voices.find(v => v.lang === "en-IN") ||
+            voices.find(v => v.lang === "en-US") ||
             voices.find(v => v.name.includes("Google US English")) ||
             voices.find(v => v.lang.startsWith("en")) ||
             voices[0]
