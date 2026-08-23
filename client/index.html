@@ -284,7 +284,7 @@
         if (t.closest('#cameraExitBtn')) exitCamera();
         if (t.closest('#voiceExitBtn')) exitVoice();
         if (t.closest('#cameraBtn')) { var c = document.getElementById('cameraOverlay'); if (c) c.style.display = ''; }
-        if (t.closest('#micBtn')) { var vo = document.getElementById('voiceOverlay'); if (vo) vo.style.display = ''; }
+
     }, true);
 })();
 </script>
@@ -308,6 +308,34 @@
             if (box && box.children.length <= 1) document.body.classList.remove('chat-active');
         }, 300);
     });
+})();
+</script>
+<!-- 🎤 VOICE MODE DETECTIVE — problem khud batayega -->
+<script>
+(function () {
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);box-shadow:0 6px 20px rgba(0,0,0,0.6);';
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 6000);
+    }
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var mic = document.getElementById('micBtn');
+    if (!mic) return;
+    mic.addEventListener('click', function () {
+        if (!SR) {
+            toast('⚠️ Is browser mein Voice Mode nahi chalta — please CHROME browser mein kholein');
+            return;
+        }
+        try {
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'microphone' }).then(function (p) {
+                    if (p.state === 'denied') toast('🎤 Mic permission blocked hai — browser settings mein Allow karein');
+                }).catch(function () {});
+            }
+        } catch (e) {}
+    }, true);
 })();
 </script>
 
