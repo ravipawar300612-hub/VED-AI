@@ -337,6 +337,29 @@
     }, true);
 })();
 </script>
-
+<!-- 🔍 VOICE X-RAY DEBUG -->
+<script>
+(function () {
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);box-shadow:0 6px 20px rgba(0,0,0,0.6);';
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 6000);
+    }
+    var mic = document.getElementById('micBtn');
+    if (!mic) return;
+    mic.addEventListener('click', function () {
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        toast('🔍 Mic tap hua! Voice support: ' + (SR ? 'YES ✅' : 'NO ❌'));
+        if (!SR) return;
+        try {
+            navigator.permissions.query({ name: 'microphone' }).then(function (p) {
+                toast('🎤 Mic permission: ' + p.state.toUpperCase());
+            }).catch(function () {});
+        } catch (e) {}
+    }, true);
+})();
+</script>
 </body>
 </html>
