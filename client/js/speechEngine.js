@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE (ELEVENLABS EDITION)
+// VED AI — SPEECH ENGINE (FIXED FOR PHONES)
 // Real natural voice + browser fallback
 // Founder: Sayali P. R. Pawar
 // ==========================================
@@ -16,22 +16,52 @@ const SpeechEngine = (function () {
     let amplitudeLoopId = null;
     let currentAudio = null;
     let simulatedLoopId = null;
+    let restartCount = 0;
+    const MAX_RESTARTS = 5;
 
     if (SpeechRecognitionAPI) {
         recognition = new SpeechRecognitionAPI();
-        recognition.lang = "en-IN";
-        recognition.continuous = false;
+        // FIX 1: Hindi/Hinglish support — Indian phones ke liye best
+        recognition.lang = "hi-IN";
+        // FIX 2: continuous = true — taaki 5 sec chup rehne par band na ho
+        recognition.continuous = true;
         recognition.interimResults = true;
+        recognition.maxAlternatives = 3;
     }
 
     const isSupported = !!SpeechRecognitionAPI;
 
+    // Current callbacks (so restart karne par yaad rahein)
+    let currentCallbacks = null;
+
     // ---------- LISTENING ----------
-    function startListening({ onInterim, onFinal, onAmplitude, onEnd, onError } = {}) {
+    function startListening(callbacks = {}) {
         if (!recognition) {
-            if (onError) onError(new Error("SpeechRecognition not supported in this browser."));
+            if (callbacks.onError) callbacks.onError(new Error("SpeechRecognition not supported"));
             return;
         }
+
+        currentCallbacks = callbacks;
+        restartCount = 0;
+        attachHandlers();
+
+        try {
+            recognition.start();
+            if (callbacks.onAmplitude) startAmplitudeMeter(callbacks.onAmplitude);
+        } catch (e) {
+            console.warn("Recognition already running, restarting...");
+            try { recognition.stop(); } catch (e2) {}
+            setTimeout(() => {
+                try { recognition.start(); } catch (e3) {}
+            }, 100);
+        }
+    }
+
+    function attachHandlers() {
+        if (!recognition || !currentCallbacks) return;
+
+        const { onInterim, onFinal, onAmplitude, onEnd, onError } = currentCallbacks;
+
         recognition.onresult = (event) => {
             let finalText = "";
             let interimText = "";
@@ -41,22 +71,59 @@ const SpeechEngine = (function () {
                 else interimText += transcript;
             }
             if (interimText && onInterim) onInterim(interimText);
-            if (finalText && onFinal) onFinal(finalText);
+            if (finalText) {
+                restartCount = 0; // reset restart counter on success
+                if (onFinal) onFinal(finalText);
+            }
         };
-        recognition.onend = () => { stopAmplitudeMeter(); if (onEnd) onEnd(); };
-        recognition.onerror = (e) => { stopAmplitudeMeter(); if (onError) onError(e); };
-        recognition.start();
-        if (onAmplitude) startAmplitudeMeter(onAmplitude);
+
+        recognition.onend = () => {
+            stopAmplitudeMeter();
+            // FIX 3: Agar koi final text nahi mila aur restart limit nahi hui, toh dobara suno
+            if (restartCount < MAX_RESTARTS && currentCallbacks) {
+                restartCount++;
+                setTimeout(() => {
+                    try {
+                        if (currentCallbacks) {
+                            recognition.start();
+                            if (currentCallbacks.onAmplitude) startAmplitudeMeter(currentCallbacks.onAmplitude);
+                        }
+                    } catch (e) {}
+                }, 200);
+            } else {
+                if (onEnd) onEnd();
+            }
+        };
+
+        recognition.onerror = (e) => {
+            stopAmplitudeMeter();
+            // network/audio-capture errors pe retry
+            if (e && e.error && (e.error === 'network' || e.error === 'audio-capture')) {
+                if (restartCount < MAX_RESTARTS) {
+                    restartCount++;
+                    setTimeout(() => {
+                        try { recognition.start(); } catch (e2) {}
+                    }, 500);
+                    return;
+                }
+            }
+            if (onError) onError(e);
+        };
     }
 
     function stopListening() {
-        if (recognition) recognition.stop();
+        restartCount = MAX_RESTARTS; // force stop, no more restarts
+        if (recognition) {
+            try { recognition.stop(); } catch (e) {}
+        }
         stopAmplitudeMeter();
+        currentCallbacks = null;
     }
 
     // ---------- MIC AMPLITUDE ----------
     async function startAmplitudeMeter(onAmplitude) {
         try {
+            if (micStream) return; // already running
             micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioContext.createAnalyser();
@@ -80,7 +147,7 @@ const SpeechEngine = (function () {
         if (amplitudeLoopId) cancelAnimationFrame(amplitudeLoopId);
         amplitudeLoopId = null;
         if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-        if (audioContext) { audioContext.close(); audioContext = null; }
+        if (audioContext) { try { audioContext.close(); } catch(e){} audioContext = null; }
     }
 
     // ---------- SIMULATED WAVEFORM ----------
@@ -140,7 +207,7 @@ const SpeechEngine = (function () {
         const utterance = new SpeechSynthesisUtterance(text);
         const voice = pickBestVoice();
         if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
-        else utterance.lang = "en-IN";
+        else utterance.lang = "hi-IN";
         utterance.rate = 1;
         utterance.pitch = 1;
         utterance.volume = 1;
@@ -154,9 +221,9 @@ const SpeechEngine = (function () {
         const voices = window.speechSynthesis.getVoices();
         if (!voices.length) return null;
         return (
-            voices.find(v => v.name.includes("Google US English")) ||
             voices.find(v => v.lang === "hi-IN") ||
             voices.find(v => v.lang === "en-IN") ||
+            voices.find(v => v.name.includes("Google US English")) ||
             voices.find(v => v.lang.startsWith("en")) ||
             voices[0]
         );
