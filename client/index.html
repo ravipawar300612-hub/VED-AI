@@ -38,14 +38,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=71">
-    <link rel="stylesheet" href="css/voice-mode.css?v=71">
-    <link rel="stylesheet" href="css/camera-mode.css?v=71">
-    <link rel="stylesheet" href="css/sidebar.css?v=71">
-    <link rel="stylesheet" href="css/loading.css?v=71">
-    <link rel="stylesheet" href="css/mobile.css?v=71">
-    <link rel="stylesheet" href="css/suraksha.css?v=71">
-    <link rel="stylesheet" href="css/missions.css?v=71">
+    <link rel="stylesheet" href="style.css?v=2092">
+    <link rel="stylesheet" href="css/voice-mode.css?v=2092">
+    <link rel="stylesheet" href="css/camera-mode.css?v=2092">
+    <link rel="stylesheet" href="css/sidebar.css?v=2092">
+    <link rel="stylesheet" href="css/loading.css?v=2092">
+    <link rel="stylesheet" href="css/mobile.css?v=2092">
+    <link rel="stylesheet" href="css/suraksha.css?v=2092">
+    <link rel="stylesheet" href="css/missions.css?v=2092">
 
     <style>
         html { background: #0b0f14; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -70,46 +70,38 @@
         <div class="progress-container"><div id="progress-bar"></div></div>
         <p id="quote">Every intelligent system starts with a single thought.</p>
     </div>
-    
-    <!-- 🎬 NETFLIX SKIP INTRO BUTTON (HARDCODED INSIDE) -->
+    <!-- 🎬 NETFLIX SKIP INTRO (HARDCODED) -->
     <button id="vedSkipBtn" type="button">Skip Intro →</button>
 </div>
 
 <style>
     #loading-screen { position: relative; }
     #vedSkipBtn {
-        position: absolute !important;
-        bottom: 30px !important;
-        right: 24px !important;
-        z-index: 99999999 !important;
-        padding: 12px 26px !important;
-        border-radius: 999px !important;
-        border: 2px solid rgba(255, 255, 255, 0.5) !important;
-        background: rgba(0, 0, 0, 0.7) !important;
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        color: #ffffff !important;
-        font-size: 15px !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.05em !important;
-        cursor: pointer !important;
-        opacity: 0;
-        animation: vedSkipFadeIn 0.8s ease 0.5s forwards;
+        position: absolute !important; bottom: 30px !important; right: 24px !important;
+        z-index: 99999999 !important; padding: 12px 26px !important; border-radius: 999px !important;
+        border: 2px solid rgba(255,255,255,0.5) !important; background: rgba(0,0,0,0.7) !important;
+        backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;
+        color: #ffffff !important; font-size: 15px !important; font-weight: 700 !important;
+        letter-spacing: 0.05em !important; cursor: pointer !important;
+        opacity: 0; animation: vedSkipFadeIn 0.8s ease 0.5s forwards;
     }
-    #vedSkipBtn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.3); }
+    #vedSkipBtn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
     @keyframes vedSkipFadeIn { to { opacity: 1; } }
 </style>
 <script>
-    document.getElementById('vedSkipBtn').addEventListener('click', function(e) {
+    document.getElementById('vedSkipBtn').addEventListener('click', function (e) {
         e.stopPropagation();
         document.getElementById('loading-screen').style.display = 'none';
     });
 </script>
 
+<!-- 📱 MOBILE HAMBURGER BUTTON + BACKDROP -->
 <button id="mobileMenuBtn" aria-label="Open menu">☰</button>
 <div id="mobileBackdrop"></div>
 
 <div class="app">
+
+    <!-- ================= SIDEBAR ================= -->
     <div class="sidebar">
         <div class="sb-header">
             <img src="logo.png" class="logo" alt="VED Logo">
@@ -137,6 +129,7 @@
         <div class="sb-footer">Sayali P. R. Pawar</div>
     </div>
 
+    <!-- ================= MAIN ================= -->
     <div class="main">
         <div class="container">
             <h1>VED AI</h1>
@@ -164,6 +157,7 @@
     </div>
 </div>
 
+<!-- ================= VOICE MODE OVERLAY ================= -->
 <div id="voiceOverlay" data-state="idle">
     <button id="voiceExitBtn" class="voice-exit-btn" type="button" aria-label="Exit voice mode">← Back</button>
     <div class="voice-brand"><img src="logo.png" alt="VED AI logo"><div class="voice-name">VED</div></div>
@@ -173,6 +167,7 @@
     <div id="voiceTranscript" class="voice-transcript"></div>
 </div>
 
+<!-- ================= CAMERA MODE OVERLAY ================= -->
 <div id="cameraOverlay" data-stage="live">
     <button id="cameraExitBtn" class="camera-exit-btn" type="button" aria-label="Exit camera mode">← Back</button>
     <div class="camera-frame"><video id="cameraVideo" autoplay playsinline muted></video><img id="cameraPreviewImg" alt="Captured photo"></div>
@@ -187,21 +182,23 @@
     <div id="cameraStatus" class="camera-status"></div>
 </div>
 
-<script src="js/authGuard.js"></script>
-<script src="js/sidebar.js"></script>
-<script src="js/speechEngine.js"></script>
-<script src="js/voiceMode.js"></script>
-<script src="js/wakeWord.js"></script>
-<script src="js/cameraEngine.js"></script>
-<script src="js/cameraMode.js"></script>
-<script src="script_new.js"></script>
-<script src="js/loading.js"></script>
-<script src="js/mobileMenu.js"></script>
-<script src="js/suraksha.js"></script>
-<script src="js/healthMode.js"></script>
-<script src="js/cropMode.js"></script>
-<script src="js/missions.js?v=101"></script>
+<!-- Scripts (naya version number = purana cache khatam) -->
+<script src="js/authGuard.js?v=2092"></script>
+<script src="js/sidebar.js?v=2092"></script>
+<script src="js/speechEngine.js?v=2092"></script>
+<script src="js/voiceMode.js?v=2092"></script>
+<script src="js/wakeWord.js?v=2092"></script>
+<script src="js/cameraEngine.js?v=2092"></script>
+<script src="js/cameraMode.js?v=2092"></script>
+<script src="script_new.js?v=2092"></script>
+<script src="js/loading.js?v=2092"></script>
+<script src="js/mobileMenu.js?v=2092"></script>
+<script src="js/suraksha.js?v=2092"></script>
+<script src="js/healthMode.js?v=2092"></script>
+<script src="js/cropMode.js?v=2092"></script>
+<script src="js/missions.js?v=2092"></script>
 
+<!-- 🎬 CINEMATIC TRANSITION -->
 <script>
 (function () {
     var input = document.getElementById('userInput');
@@ -215,15 +212,16 @@
 })();
 </script>
 
+<!-- 🫧 PREMIUM GLASS PILL -->
 <style>
     .container { display: flex; flex-direction: column; }
     body:not(.chat-active) .container { justify-content: center; }
     body:not(.chat-active) #chatMessages { display: none; }
     .input-area {
         display: flex !important; align-items: center !important; gap: 4px !important;
-        background: rgba(23, 28, 35, 0.85) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.18) !important; border-radius: 999px !important;
-        padding: 6px 6px 6px 14px !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+        background: rgba(23,28,35,0.85) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.18) !important; border-radius: 999px !important;
+        padding: 6px 6px 6px 14px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.45) !important;
         max-width: 780px !important; width: 100% !important; margin: 14px auto 12px !important;
     }
     #attachBtn { order: 0; } #userInput { order: 1; } #cameraBtn { order: 2; } #micBtn { order: 3; } #sendBtn { order: 4; }
@@ -237,10 +235,10 @@
         background: transparent !important; border: none !important; width: 38px !important; height: 38px !important;
         border-radius: 50% !important; color: #aeb7c4 !important; flex: 0 0 auto;
     }
-    .input-area .icon-btn:hover { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; }
+    .input-area .icon-btn:hover { background: rgba(255,255,255,0.08) !important; color: #ffffff !important; }
     #sendBtn {
         width: 40px !important; height: 40px !important; border-radius: 50% !important; border: none !important;
-        background: linear-gradient(135deg, #ff6b6b, #ee2b5b) !important; color: transparent !important;
+        background: linear-gradient(135deg,#ff6b6b,#ee2b5b) !important; color: transparent !important;
         font-size: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important;
         flex: 0 0 auto; cursor: pointer;
     }
@@ -251,44 +249,54 @@
     (function () { var inp = document.getElementById('userInput'); if (inp) inp.placeholder = 'Ask anything...'; })();
 </script>
 
+<!-- 🔙 GLASS BACK BUTTON STYLE -->
 <style>
     #voiceExitBtn, #cameraExitBtn {
         position: fixed !important; top: 18px !important; left: 16px !important; width: auto !important;
-        height: 44px !important; padding: 0 18px !important; background: rgba(15, 18, 24, 0.75) !important;
+        height: 44px !important; padding: 0 18px !important; background: rgba(15,18,24,0.75) !important;
         backdrop-filter: blur(14px) !important; -webkit-backdrop-filter: blur(14px) !important; color: #eef2f6 !important;
-        border: 1px solid rgba(255, 255, 255, 0.22) !important; border-radius: 999px !important;
+        border: 1px solid rgba(255,255,255,0.22) !important; border-radius: 999px !important;
         font-size: 15px !important; font-weight: 600 !important; letter-spacing: 0.02em !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
         opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
-        transform: none !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+        transform: none !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
         z-index: 2147483647 !important; cursor: pointer !important;
     }
-    #voiceExitBtn:active, #cameraExitBtn:active { transform: scale(0.94) !important; background: rgba(255, 255, 255, 0.15) !important; }
+    #voiceExitBtn:active, #cameraExitBtn:active { transform: scale(0.94) !important; background: rgba(255,255,255,0.15) !important; }
 </style>
+
+<!-- 🔙 BACK BUTTON CLEAN FIX v2 (NO display:none lock — isi se voice stuck hota tha!) -->
 <script>
 (function () {
+    function unlockOverlays() {
+        var v = document.getElementById('voiceOverlay');
+        var c = document.getElementById('cameraOverlay');
+        if (v) v.style.display = '';
+        if (c) c.style.display = '';
+    }
     function exitCamera() {
         var o = document.getElementById('cameraOverlay');
-        if (o) { o.style.display = 'none'; o.setAttribute('data-stage', 'idle'); }
+        if (o) { o.classList.remove('active'); o.setAttribute('data-stage', 'idle'); o.style.display = ''; }
         try { var v = document.getElementById('cameraVideo');
             if (v && v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.srcObject = null; } } catch (e) {}
         document.body.classList.remove('camera-active');
     }
     function exitVoice() {
         var o = document.getElementById('voiceOverlay');
-        if (o) { o.style.display = 'none'; o.setAttribute('data-state', 'idle'); }
+        if (o) { o.classList.remove('active'); o.setAttribute('data-state', 'idle'); o.style.display = ''; }
         document.body.classList.remove('voice-active');
+        if (typeof VoiceMode !== 'undefined' && VoiceMode.close) { try { VoiceMode.close(); } catch (e) {} }
     }
     document.addEventListener('click', function (e) {
         var t = e.target; if (!t || !t.closest) return;
-        if (t.closest('#cameraExitBtn')) exitCamera();
-        if (t.closest('#voiceExitBtn')) exitVoice();
-        if (t.closest('#cameraBtn')) { var c = document.getElementById('cameraOverlay'); if (c) c.style.display = ''; }
-
+        if (t.closest('#cameraExitBtn')) { exitCamera(); return; }
+        if (t.closest('#voiceExitBtn')) { exitVoice(); return; }
+        if (t.closest('#micBtn') || t.closest('#cameraBtn')) { unlockOverlays(); }
     }, true);
 })();
 </script>
 
+<!-- 🎬 CINEMA FOCUS MODE — Wallpaper → Black -->
 <style>
     .app { position: relative; z-index: 2; }
     body::after {
@@ -310,7 +318,8 @@
     });
 })();
 </script>
-<!-- 🎤 VOICE MODE DETECTIVE — problem khud batayega -->
+
+<!-- 🎤 VOICE DETECTIVE TOAST -->
 <script>
 (function () {
     function toast(msg) {
@@ -324,17 +333,7 @@
     var mic = document.getElementById('micBtn');
     if (!mic) return;
     mic.addEventListener('click', function () {
-        if (!SR) {
-            toast('⚠️ Is browser mein Voice Mode nahi chalta — please CHROME browser mein kholein');
-            return;
-        }
-        try {
-            if (navigator.permissions && navigator.permissions.query) {
-                navigator.permissions.query({ name: 'microphone' }).then(function (p) {
-                    if (p.state === 'denied') toast('🎤 Mic permission blocked hai — browser settings mein Allow karein');
-                }).catch(function () {});
-            }
-        } catch (e) {}
+        if (!SR) toast('⚠️ Is browser mein Voice Mode nahi chalta — please CHROME mein kholein');
     }, true);
 })();
 </script>
