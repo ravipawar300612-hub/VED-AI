@@ -361,5 +361,44 @@
     }, true);
 })();
 </script>
+<!-- 🩻 VOICE X-RAY v2 — engine ki har harkat -->
+<script>
+(function () {
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);box-shadow:0 6px 20px rgba(0,0,0,0.6);';
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 6000);
+    }
+
+    // 1) Overlay state changes dikhao
+    var o = document.getElementById('voiceOverlay');
+    if (o && window.MutationObserver) {
+        new MutationObserver(function () {
+            toast('📊 State: ' + (o.dataset.state || '?') + (o.classList.contains('active') ? ' (open)' : ' (closed)'));
+        }).observe(o, { attributes: true, attributeFilter: ['data-state', 'class'] });
+    }
+
+    // 2) SpeechEngine ke errors pakdo
+    if (window.SpeechEngine && SpeechEngine.startListening) {
+        var orig = SpeechEngine.startListening.bind(SpeechEngine);
+        SpeechEngine.startListening = function (opts) {
+            var o2 = opts || {};
+            var ue = o2.onError, uf = o2.onFinal;
+            o2.onError = function (err) {
+                var code = (err && err.error) ? err.error : String(err);
+                toast('❌ SR error: ' + code);
+                if (ue) ue(err);
+            };
+            o2.onFinal = function (t) {
+                toast('🗣️ VED ne suna: "' + String(t).slice(0, 25) + '"');
+                if (uf) uf(t);
+            };
+            return orig(o2);
+        };
+    }
+})();
+</script>
 </body>
 </html>
