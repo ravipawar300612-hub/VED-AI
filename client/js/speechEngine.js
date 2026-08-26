@@ -10,28 +10,22 @@ const SpeechEngine = (function () {
         window.SpeechRecognition || window.webkitSpeechRecognition;
 
     let recognition = null;
-    let audioContext = null;
-    let analyser = null;
-    let micStream = null;
-    let amplitudeLoopId = null;
-    let currentAudio = null;
-    let simulatedLoopId = null;
     let restartCount = 0;
     const MAX_RESTARTS = 5;
+    let currentAudio = null;
+    let simulatedLoopId = null;
+    let isExplicitlyStopped = false;
 
     if (SpeechRecognitionAPI) {
         recognition = new SpeechRecognitionAPI();
-        // FIX 1: Hindi/Hinglish support — Indian phones ke liye best
         recognition.lang = "hi-IN";
-        // FIX 2: continuous = true — taaki 5 sec chup rehne par band na ho
-        recognition.continuous = true;
+        // Note: Mobile browsers ignore continuous=true, so we manage re-entry in onend
+        recognition.continuous = false; 
         recognition.interimResults = true;
-        recognition.maxAlternatives = 3;
+        recognition.maxAlternatives = 1;
     }
 
     const isSupported = !!SpeechRecognitionAPI;
-
-    // Current callbacks (so restart karne par yaad rahein)
     let currentCallbacks = null;
 
     // ---------- LISTENING ----------
@@ -43,111 +37,91 @@ const SpeechEngine = (function () {
 
         currentCallbacks = callbacks;
         restartCount = 0;
+        isExplicitlyStopped = false;
         attachHandlers();
 
         try {
             recognition.start();
-            if (callbacks.onAmplitude) startAmplitudeMeter(callbacks.onAmplitude);
         } catch (e) {
-            console.warn("Recognition already running, restarting...");
-            try { recognition.stop(); } catch (e2) {}
+            console.warn("Recognition already running, aborting and restarting safely...");
+            recognition.abort(); // Clears thread locks on mobile
             setTimeout(() => {
-                try { recognition.start(); } catch (e3) {}
-            }, 100);
+                try { if(!isExplicitlyStopped) recognition.start(); } catch (err) {}
+            }, 400);
         }
     }
 
     function attachHandlers() {
         if (!recognition || !currentCallbacks) return;
 
-        const { onInterim, onFinal, onAmplitude, onEnd, onError } = currentCallbacks;
+        const { onInterim, onFinal, onEnd, onError } = currentCallbacks;
 
         recognition.onresult = (event) => {
             let finalText = "";
             let interimText = "";
+            
             for (let i = event.resultIndex; i < event.results.length; i++) {
+                // Mobile Fix: Ignore empty anomalies or zero confidence frames
+                if (event.results[i][0].confidence === 0 && event.results[i].isFinal) {
+                    continue;
+                }
+                
                 const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) finalText += transcript;
-                else interimText += transcript;
+                if (event.results[i].isFinal) {
+                    finalText += transcript;
+                } else {
+                    interimText += transcript;
+                }
             }
+            
             if (interimText && onInterim) onInterim(interimText);
             if (finalText) {
-                restartCount = 0; // reset restart counter on success
+                restartCount = 0; 
                 if (onFinal) onFinal(finalText);
             }
         };
 
         recognition.onend = () => {
-            stopAmplitudeMeter();
-            // FIX 3: Agar koi final text nahi mila aur restart limit nahi hui, toh dobara suno
+            if (isExplicitlyStopped) {
+                if (onEnd) onEnd();
+                return;
+            }
+
+            // Mobile Auto-Restart Workaround (Gives OS time to clean up hardware locks)
             if (restartCount < MAX_RESTARTS && currentCallbacks) {
                 restartCount++;
                 setTimeout(() => {
                     try {
-                        if (currentCallbacks) {
+                        if (currentCallbacks && !isExplicitlyStopped) {
                             recognition.start();
-                            if (currentCallbacks.onAmplitude) startAmplitudeMeter(currentCallbacks.onAmplitude);
                         }
-                    } catch (e) {}
-                }, 200);
+                    } catch (e) {
+                        // Fallback retry if OS was still busy
+                        recognition.abort();
+                        setTimeout(() => { try { recognition.start(); } catch(err){} }, 500);
+                    }
+                }, 400); // 400ms delay protects mobile memory channels
             } else {
                 if (onEnd) onEnd();
             }
         };
 
         recognition.onerror = (e) => {
-            stopAmplitudeMeter();
-            // network/audio-capture errors pe retry
-            if (e && e.error && (e.error === 'network' || e.error === 'audio-capture')) {
-                if (restartCount < MAX_RESTARTS) {
-                    restartCount++;
-                    setTimeout(() => {
-                        try { recognition.start(); } catch (e2) {}
-                    }, 500);
-                    return;
-                }
+            if (e.error === 'not-allowed') {
+                console.error("❌ Mic permission denied by user or unsecure origin (HTTP)");
+                isExplicitlyStopped = true;
             }
             if (onError) onError(e);
         };
     }
 
     function stopListening() {
-        restartCount = MAX_RESTARTS; // force stop, no more restarts
+        isExplicitlyStopped = true;
+        restartCount = MAX_RESTARTS; 
         if (recognition) {
-            try { recognition.stop(); } catch (e) {}
+            try { recognition.abort(); } catch (e) {}
         }
-        stopAmplitudeMeter();
         currentCallbacks = null;
-    }
-
-    // ---------- MIC AMPLITUDE ----------
-    async function startAmplitudeMeter(onAmplitude) {
-        try {
-            if (micStream) return; // already running
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            const source = audioContext.createMediaStreamSource(micStream);
-            source.connect(analyser);
-            const data = new Uint8Array(analyser.frequencyBinCount);
-            const loop = () => {
-                analyser.getByteFrequencyData(data);
-                const avg = data.reduce((a, b) => a + b, 0) / data.length;
-                onAmplitude(avg / 255);
-                amplitudeLoopId = requestAnimationFrame(loop);
-            };
-            loop();
-        } catch (err) {
-            console.warn("⚠️ Mic amplitude meter unavailable:", err.message);
-        }
-    }
-
-    function stopAmplitudeMeter() {
-        if (amplitudeLoopId) cancelAnimationFrame(amplitudeLoopId);
-        amplitudeLoopId = null;
-        if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-        if (audioContext) { try { audioContext.close(); } catch(e){} audioContext = null; }
     }
 
     // ---------- SIMULATED WAVEFORM ----------
@@ -156,6 +130,7 @@ const SpeechEngine = (function () {
         stopSimulatedWave();
         simulatedLoopId = setInterval(() => onAmplitude(0.25 + Math.random() * 0.75), 90);
     }
+    
     function stopSimulatedWave() {
         if (simulatedLoopId) clearInterval(simulatedLoopId);
         simulatedLoopId = null;
@@ -166,12 +141,11 @@ const SpeechEngine = (function () {
         stopSimulatedWave();
     }
 
-    // ---------- SPEAKING (ElevenLabs first, fallback browser) ----------
+    // ---------- SPEAKING ----------
     function speak(text, { onStart, onAmplitude, onEnd } = {}) {
-        window.speechSynthesis.cancel();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
         stopCurrentAudio();
 
-       
         const cleanText = String(text)
             .replace(/[#*_`~]/g, "")
             .replace(/https?:\/\/\S+/g, " link ")
@@ -198,74 +172,53 @@ const SpeechEngine = (function () {
             return currentAudio.play();
         })
         .catch(err => {
-            console.warn("⚠️ ElevenLabs unavailable, browser voice:", err.message);
+            console.warn("⚠️ ElevenLabs unavailable, browser voice fallback:", err.message);
             browserSpeak(cleanText, { onStart, onAmplitude, onEnd });
         });
     }
 
-   app.post("/tts", async (req, res) => {
-    const voiceId = process.env.ELEVENLABS_VOICE_ID;
-    const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
-
-    // Send the request to ElevenLabs here.
-});
     // ---------- FALLBACK: BROWSER VOICE ----------
     function browserSpeak(text, { onStart, onAmplitude, onEnd } = {}) {
+        if (!window.speechSynthesis) return;
         const utterance = new SpeechSynthesisUtterance(text);
         const voice = pickBestVoice();
         if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
         else utterance.lang = "en-US";
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        utterance.volume = 1;
+        
         utterance.onstart = () => { startSimulatedWave(onAmplitude); if (onStart) onStart(); };
         utterance.onend = () => { stopSimulatedWave(); if (onEnd) onEnd(); };
         utterance.onerror = () => { stopSimulatedWave(); if (onEnd) onEnd(); };
         window.speechSynthesis.speak(utterance);
     }
 
-    // function pickBestVoice() {
-    //     const voices = window.speechSynthesis.getVoices();
-    //     if (!voices.length) return null;
-    //     return (
-    //         voices.find(v => v.lang === "en-IN") ||
-    //         voices.find(v => v.lang === "en-US") ||
-    //         voices.find(v => v.name.includes("Google US English")) ||
-    //         voices.find(v => v.lang.startsWith("en")) ||
-    //         voices[0]
-    //     );
-    // }
-
     function pickBestVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    if (!voices.length) return null;
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices.length) return null;
 
-    const savedVoiceURI = localStorage.getItem("vedPreferredVoice");
+        const savedVoiceURI = localStorage.getItem("vedPreferredVoice");
+        let voice = voices.find(v => v.voiceURI === savedVoiceURI);
 
-    let voice = voices.find(v => v.voiceURI === savedVoiceURI);
+        if (!voice) {
+            voice =
+                voices.find(v => v.name === "Google US English") ||
+                voices.find(v => v.lang === "en-IN") ||
+                voices.find(v => v.lang === "en-US") ||
+                voices.find(v => v.lang.startsWith("en")) ||
+                voices[0];
 
-    if (!voice) {
-        voice =
-            voices.find(v => v.name === "Google US English") ||
-            voices.find(v => v.lang === "en-IN") ||
-            voices.find(v => v.lang === "en-US") ||
-            voices.find(v => v.lang.startsWith("en")) ||
-            voices[0];
-
-        if (voice) {
-            localStorage.setItem("vedPreferredVoice", voice.voiceURI);
+            if (voice) {
+                localStorage.setItem("vedPreferredVoice", voice.voiceURI);
+            }
         }
+        return voice;
     }
 
-    return voice;
-}
-
-if ("speechSynthesis" in window) {
-    window.speechSynthesis.addEventListener("voiceschanged", pickBestVoice);
-}
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.addEventListener("voiceschanged", pickBestVoice);
+    }
 
     function cancelSpeaking() {
-        window.speechSynthesis.cancel();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
         stopCurrentAudio();
     }
 
