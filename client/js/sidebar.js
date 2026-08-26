@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SIDEBAR CONTROLLER
+// VED AI — SIDEBAR CONTROLLER (NEW CHAT FIXED)
 // Handles: collapse/expand, search filter,
 // time-grouped chat list, rename/delete menu.
 // Talks to script_new.js only through the
@@ -18,7 +18,7 @@ const Sidebar = (function () {
     // Each entry: { id, title, timestamp }
     let entries = [];
 
-    let root, toggleBtn, searchInput, groupsEl;
+    let root, toggleBtn, searchInput, groupsEl, newChatBtn;
 
     function init() {
 
@@ -26,9 +26,15 @@ const Sidebar = (function () {
         toggleBtn = document.getElementById("sidebarCollapseBtn");
         searchInput = document.getElementById("sidebarSearchInput");
         groupsEl = document.getElementById("sidebarGroups");
+        newChatBtn = document.getElementById("newChatBtn");
 
         toggleBtn.addEventListener("click", toggleCollapse);
         searchInput.addEventListener("input", () => render(searchInput.value));
+        
+        // ✅ NEW CHAT BUTTON FIX
+        if (newChatBtn) {
+            newChatBtn.addEventListener("click", handleNewChat);
+        }
 
         // Close any open context menu when clicking elsewhere
         document.addEventListener("click", (e) => {
@@ -38,6 +44,45 @@ const Sidebar = (function () {
         });
 
         render();
+    }
+
+    // ✅ NEW CHAT HANDLER
+    function handleNewChat() {
+        // Clear chat messages
+        const chatBox = document.getElementById("chatMessages");
+        if (chatBox) {
+            chatBox.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
+        }
+        
+        // Clear input
+        const userInput = document.getElementById("userInput");
+        if (userInput) userInput.value = "";
+        
+        // Reset UI state
+        document.body.classList.remove("chat-active");
+        
+        // Close sidebar on mobile
+        if (window.innerWidth <= 768) {
+            const sidebar = document.querySelector(".sidebar");
+            const backdrop = document.getElementById("mobileBackdrop");
+            if (sidebar) {
+                sidebar.style.display = "";
+                sidebar.style.transform = "";
+                sidebar.style.position = "";
+                sidebar.style.zIndex = "";
+            }
+            if (backdrop) {
+                backdrop.style.display = "";
+                backdrop.style.position = "";
+            }
+        }
+        
+        // Show toast
+        const toast = document.createElement("div");
+        toast.textContent = "✅ Nayi chat shuru!";
+        toast.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;border:1px solid rgba(255,255,255,0.25);";
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
     }
 
     function toggleCollapse() {
@@ -224,7 +269,7 @@ const Sidebar = (function () {
         renameChat,
         setActive,
         onSelect: (cb) => { selectCallback = cb; },
-        onDelete: (cb) => { deleteCallback = cb; }
+        onDelete: (cb) => { deleteCallback = cb }
     };
 
 })();

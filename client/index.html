@@ -458,5 +458,39 @@
     }, true);
 })();
 </script>
+<!-- ➕ FLOATING NEW CHAT FAB (phone-proof) -->
+<style>
+    #fabNewChat {
+        position: fixed;
+        bottom: 100px;
+        right: 18px;
+        width: 52px; height: 52px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff6b6b, #ee2b5b);
+        color: #fff; font-size: 26px; font-weight: 700;
+        border: none;
+        z-index: 9999998;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+    }
+    #fabNewChat:active { transform: scale(0.92); }
+    @media (min-width: 900px) { #fabNewChat { display: none; } }
+</style>
+<button id="fabNewChat" type="button" aria-label="New chat">+</button>
+<script>
+    document.getElementById('fabNewChat').addEventListener('click', function (e) {
+        e.stopImmediatePropagation();
+        var box = document.getElementById('chatMessages');
+        if (box) box.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
+        var inp = document.getElementById('userInput');
+        if (inp) inp.value = '';
+        document.body.classList.remove('chat-active');
+        var sb = document.querySelector('.sidebar');
+        var bd = document.getElementById('mobileBackdrop');
+        if (sb) { sb.style.display = ''; sb.style.transform = ''; sb.style.position = ''; sb.style.zIndex = ''; }
+        if (bd) { bd.style.display = ''; bd.style.position = ''; }
+    }, true);
+</script>
 </body>
 </html>
