@@ -400,5 +400,55 @@
     }
 })();
 </script>
+<!-- 📱 MOBILE SIDEBAR FORCE FIX + CHAT BOTTOM ANCHOR -->
+<style>
+    .chat-box { display: flex; flex-direction: column; }
+    .chat-box > :first-child { margin-top: auto; }
+</style>
+<script>
+(function () {
+    var btn = document.getElementById('mobileMenuBtn');
+    var sb = document.querySelector('.sidebar');
+    var bd = document.getElementById('mobileBackdrop');
+    if (!btn || !sb) return;
+
+    function openSb() {
+        sb.style.position = 'fixed';
+        sb.style.top = '0'; sb.style.left = '0'; sb.style.bottom = '0';
+        sb.style.width = '280px';
+        sb.style.maxWidth = '85vw';
+        sb.style.transform = 'translateX(0)';
+        sb.style.display = 'block';
+        sb.style.zIndex = '999999';
+        sb.style.overflowY = 'auto';
+        sb.style.background = '#10151c';
+        if (bd) {
+            bd.style.display = 'block';
+            bd.style.position = 'fixed';
+            bd.style.top = '0'; bd.style.left = '0';
+            bd.style.right = '0'; bd.style.bottom = '0';
+            bd.style.background = 'rgba(0,0,0,0.55)';
+            bd.style.zIndex = '999998';
+        }
+    }
+    function closeSb() {
+        sb.style.display = ''; sb.style.transform = '';
+        sb.style.position = ''; sb.style.zIndex = '';
+        if (bd) { bd.style.display = ''; bd.style.position = ''; }
+    }
+    btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (sb.style.display === 'block') closeSb(); else openSb();
+    }, true);
+    if (bd) bd.addEventListener('click', function (e) {
+        e.stopImmediatePropagation(); closeSb();
+    }, true);
+    ['newChatBtn', 'sidebarCollapseBtn'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('click', function () { setTimeout(closeSb, 150); });
+    });
+})();
+</script>
 </body>
 </html>
