@@ -203,15 +203,12 @@ const SpeechEngine = (function () {
         });
     }
 
-    app.post("/tts", async (req, res) => {
+   app.post("/tts", async (req, res) => {
     const voiceId = process.env.ELEVENLABS_VOICE_ID;
-
-    // Use voiceId in the ElevenLabs URL:
     const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
 
-    // ...existing ElevenLabs request code...
+    // Send the request to ElevenLabs here.
 });
-
     // ---------- FALLBACK: BROWSER VOICE ----------
     function browserSpeak(text, { onStart, onAmplitude, onEnd } = {}) {
         const utterance = new SpeechSynthesisUtterance(text);
