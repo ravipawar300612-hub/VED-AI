@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI SERVER v8.4 (PHASE 1 PACK + MISSIONS)
+// VED AI SERVER v8.6 (TRILINGUAL + QUOTA SAVER)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
@@ -35,6 +35,176 @@ app.use(express.static(CLIENT_PATH));
 
 // Gemini AI setup
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// ===============================
+// 🌐 LANGUAGE DETECTOR
+// ===============================
+function detectLanguage(text) {
+    const t = String(text || "");
+    const lower = t.toLowerCase();
+
+    // Devanagari script
+    if (/[\u0900-\u097F]/.test(t)) {
+        if (/(आहे|आहात|नाही|काय|कसे|कशी|झाले|झाली|मला|तुम्ही|होय|जावो|करू|हवी)/.test(t)) return "marathi";
+        return "hindi";
+    }
+    // Latin script Marathi (Hinglish-Marathi)
+    if (/\b(kasa|kahasa|zala|zali|zale|tuza|tumhi|nako|ahes|ahet|havi|karu)\b/.test(lower)) return "marathi";
+    // Latin script Hindi / Hinglish
+    if (/\b(kaise|kaisa|kya|hai|ho|namaste|namaskar|shukriya|dhanyavad|theek|accha|acha|haan|nahi|yaar|bhai|didi|matlab)\b/.test(lower)) return "hindi";
+    return "english";
+}
+
+function randomPick(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// ===============================
+// ⚡ SMART GREETING CACHE (Quota Saver #1) — TRILINGUAL
+// ===============================
+const CANNED_RESPONSES = {
+    english: {
+        greeting: [
+            "Hello! I'm VED AI. How may I help you today?",
+            "Hi there! Welcome. Please go ahead with your question.",
+            "Greetings! I'm here to assist you. What can I do for you?"
+        ],
+        howAreYou: [
+            "I'm doing great, thank you for asking! How can I assist you today?",
+            "All good on my side! Please tell me how I can help you."
+        ],
+        thanks: [
+            "You're most welcome! Feel free to ask if you need anything else.",
+            "It's my pleasure! I'm here whenever you need help."
+        ],
+        bye: [
+            "Goodbye! I'm here whenever you need me.",
+            "Take care! It was nice assisting you."
+        ],
+        loveYou: [
+            "Thank you so much! It's truly a pleasure to assist you.",
+            "That's very kind of you! I'm always here to help."
+        ],
+        ok: ["Sure.", "Understood.", "Alright."],
+        yes: ["Yes, absolutely.", "Of course."],
+        no: ["No problem at all.", "That's perfectly fine."],
+        busy: [
+            "I'm fully available to help you. Please go ahead with your question.",
+            "I'm ready to assist you. What would you like to ask?"
+        ]
+    },
+    hindi: {
+        greeting: [
+            "नमस्ते! मैं VED AI हूँ। बताइए, आज मैं आपकी कैसे मदद कर सकता हूँ?",
+            "नमस्कार! आपका स्वागत है। कृपया अपना सवाल पूछिए।",
+            "हैलो! मैं आपकी सेवा में हाज़िर हूँ। बताइए क्या मदद करूँ?"
+        ],
+        howAreYou: [
+            "मैं बिल्कुल ठीक हूँ, धन्यवाद! आप सुनाइए, मैं आपकी क्या मदद कर सकता हूँ?",
+            "सब बढ़िया है! आप बताइए, आज मैं आपके लिए क्या कर सकता हूँ?"
+        ],
+        thanks: [
+            "आपका स्वागत है! और कोई सवाल हो तो ज़रूर पूछिए।",
+            "कोई बात नहीं! यह तो मेरा काम है। और कुछ चाहिए तो बताइए।"
+        ],
+        bye: [
+            "अलविदा! जब भी ज़रूरत हो, मैं यहीं हूँ।",
+            "फिर मिलेंगे! आपका दिन शुभ हो।"
+        ],
+        loveYou: [
+            "आपका बहुत-बहुत धन्यवाद! आपकी मदद करना मेरे लिए खुशी की बात है।",
+            "यह सुनकर मन खुश हो गया! मैं हमेशा आपकी सेवा में हूँ।"
+        ],
+        ok: ["ठीक है।", "समझ गया।", "बिल्कुल।"],
+        yes: ["जी हाँ, बिल्कुल।", "हाँ, ज़रूर।"],
+        no: ["कोई बात नहीं।", "ठीक है, चिंता की कोई बात नहीं।"],
+        busy: [
+            "मैं आपकी मदद के लिए पूरी तरह उपलब्ध हूँ। बताइए, क्या सवाल है आपका?",
+            "मैं तैयार हूँ आपकी सेवा के लिए। बताइए क्या मदद चाहिए?"
+        ]
+    },
+    marathi: {
+        greeting: [
+            "नमस्कार! मी VED AI आहे. सांगा, आज मी तुमची कशी मदत करू शकतो?",
+            "नमस्कार! तुमचं स्वागत आहे. कृपया तुमचा प्रश्न विचारा.",
+            "हॅलो! मी तुमच्या सेवेत हजर आहे. बोला, काय मदत करू?"
+        ],
+        howAreYou: [
+            "मी एकदम ठीक आहे, धन्यवाद! तुम्ही सांगा, मी तुमची काय मदत करू शकतो?",
+            "सर्व छान आहे! तुम्ही बोला, आज मी तुमच्यासाठी काय करू शकतो?"
+        ],
+        thanks: [
+            "तुमचं स्वागत आहे! आणखी काही प्रश्न असल्यास नक्की विचारा.",
+            "काही नाही! हे तर माझं काम आहे. आणखी काही हवं असल्यास सांगा."
+        ],
+        bye: [
+            "पुन्हा भेटू! जेव्हा गरज असेल, तेव्हा मी इथेच आहे.",
+            "निरोप! तुमचा दिवस शुभ जावो."
+        ],
+        loveYou: [
+            "तुमचा खूप खूप धन्यवाद! तुमची मदत करणं माझ्यासाठी आनंदाची गोष्ट आहे.",
+            "हे ऐकून खूप छान वाटलं! मी नेहमी तुमच्या सेवेत आहे."
+        ],
+        ok: ["ठीक आहे.", "समजलं.", "नक्की."],
+        yes: ["हो, नक्की.", "हो, जरूर."],
+        no: ["काही हरकत नाही.", "ठीक आहे, चिंता नको."],
+        busy: [
+            "मी तुमच्या मदतीसाठी पूर्णपणे उपलब्ध आहे. बोला, तुमचा प्रश्न काय आहे?",
+            "मी तुमच्या सेवेसाठी तयार आहे. सांगा, काय मदत हवी आहे?"
+        ]
+    }
+};
+
+const GREETING_RULES = [
+    { re: /^(hi+e*|hey+|hello+|yo+|hlo+|hii+)([!\s.]*)$/i, cat: "greeting" },
+    { re: /^(namaste+|namaskar+|नमस्ते+|नमस्कार+)([!\s.]*)$/i, cat: "greeting" },
+    { re: /^(kaise ho|kaisa hai|kya haal|how are you|what'?s up|wassup|sup|kasa aahes|kasa ahes|कैसे हो|कैसा है|तुम्ही कसे आहात)([!\s?.]*)$/i, cat: "howAreYou" },
+    { re: /^(good morning|good afternoon|good evening|good night|shubh prabhat|शुभ प्रभात)([!\s.]*)$/i, cat: "greeting" },
+    { re: /^(thanks|thank you|thnx|ty|shukriya|dhanyavaad|dhanyavad|धन्यवाद|शुक्रिया)([!\s.]*)$/i, cat: "thanks" },
+    { re: /^(bye|goodbye|alvida|tata|see you|अलविदा|निरोप)([!\s.]*)$/i, cat: "bye" },
+    { re: /^(love you|ily|i love you)([!\s.]*)$/i, cat: "loveYou" },
+    { re: /^(ok|okay|theek hai|thik hai|sahi hai|ठीक है)([!\s.]*)$/i, cat: "ok" },
+    { re: /^(haan|yes|yeah|yep|yup|ji haan|हो|हाँ|जी हां)([!\s.]*)$/i, cat: "yes" },
+    { re: /^(nahi|no|nope|nah|नहीं|नाही)([!\s.]*)$/i, cat: "no" },
+    { re: /^(kya kar rahe ho|what are you doing|busy ho|kay karat aahes|क्या कर रहे हो)([!\s?.]*)$/i, cat: "busy" }
+];
+
+function getGreetingResponse(message) {
+    const msg = String(message || "").trim();
+    const lang = detectLanguage(msg);
+    for (const rule of GREETING_RULES) {
+        if (rule.re.test(msg)) {
+            const pool = CANNED_RESPONSES[lang] && CANNED_RESPONSES[lang][rule.cat];
+            if (pool && pool.length) return randomPick(pool);
+        }
+    }
+    return null;
+}
+
+// ===============================
+// 🔄 MODEL FALLBACK (Quota Saver #2)
+// ===============================
+const MODEL_CHAIN = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+
+async function generateWithFallback(contents) {
+    let lastError = null;
+    for (const model of MODEL_CHAIN) {
+        try {
+            const result = await ai.models.generateContent({ model, contents });
+            console.log("✅ Used model:", model);
+            return result;
+        } catch (err) {
+            const errMsg = String(err.message || err).toLowerCase();
+            if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
+                console.warn("⚠️ " + model + " quota full, trying next...");
+                lastError = err;
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw lastError || new Error("All models quota exhausted");
+}
 
 // ===============================
 // MEMORY (Startup se 30 messages load)
@@ -86,22 +256,37 @@ app.get("/history", (req, res) => {
 });
 
 // ===============================
-// CHAT ROUTE (PHASE 1 — BOLI + MOOD)
+// CHAT ROUTE (TRILINGUAL + WARM PROFESSIONAL + QUOTA SAVER)
 // ===============================
 app.post("/chat", async (req, res) => {
     try {
         const message = req.body.message;
-        const lang = String(req.body.lang || '').toLowerCase();
-        const tone = String(req.body.tone || '').toLowerCase();
-        const langLine = lang === 'hindi' ? '\nLANGUAGE RULE: Reply ONLY in simple Hindi (Devanagari script).'
-            : lang === 'marathi' ? '\nLANGUAGE RULE: Reply ONLY in simple Marathi (Devanagari script).'
-            : lang === 'english' ? '\nLANGUAGE RULE: Reply ONLY in simple English.' : '';
-        const toneLine = tone === 'bodyguard' ? '\nTONE: Serious protective bodyguard mode — short, firm, safety-first.'
-            : tone === 'ustaad' ? '\nTONE: Respectful teacher mode — clear, encouraging.'
-            : '\nTONE: Friendly dost mode — casual, warm, fun.';
+        const lang = String(req.body.lang || "").toLowerCase();
+        const tone = String(req.body.tone || "").toLowerCase();
         console.log("📩 User:", message);
 
         db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", message]);
+
+        // ⚡ SMART CACHE — greetings ke liye 0 API call (trilingual)
+        const cachedReply = getGreetingResponse(message);
+        if (cachedReply) {
+            console.log("⚡ CACHED greeting response (quota saved!)");
+            db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", cachedReply]);
+            conversationHistory.push({ role: "user", parts: [{ text: message }] });
+            conversationHistory.push({ role: "model", parts: [{ text: cachedReply }] });
+            if (conversationHistory.length > 30) conversationHistory = conversationHistory.slice(-30);
+            return res.json({ reply: cachedReply, cached: true });
+        }
+
+        // Client ne explicit language bheji toh wo priority
+        const langLine = lang === "hindi" ? "\nLANGUAGE RULE: Reply ONLY in simple Hindi (Devanagari script)."
+            : lang === "marathi" ? "\nLANGUAGE RULE: Reply ONLY in simple Marathi (Devanagari script)."
+            : lang === "english" ? "\nLANGUAGE RULE: Reply ONLY in simple English."
+            : "\nLANGUAGE RULE (AUTO-DETECT): Detect the language AND script of the user's message and reply in the SAME language and SAME script. English message → English reply. Hindi in Devanagari → Hindi in Devanagari. Hindi/Hinglish in Latin letters → Hinglish in Latin letters. Marathi → Marathi. Mixed message → reply in the dominant language.";
+
+        const toneLine = tone === "bodyguard" ? "\nTONE: Serious protective bodyguard mode — short, firm, safety-first."
+            : tone === "ustaad" ? "\nTONE: Respectful teacher mode — clear, encouraging."
+            : "\nTONE: Warm, respectful and professional friend mode — caring but polite.";
 
         const rememberMatch = message.match(/^remember (that )?(.+)/i);
         if (rememberMatch) {
@@ -125,13 +310,14 @@ app.post("/chat", async (req, res) => {
             : "";
 
         const systemPrompt = `
-You are VED AI, created by Sayali P. R. Pawar.
+You are VED AI, a warm, professional AI assistant created by Sayali P. R. Pawar.
 Never say you are Gemini.
 
 IMPORTANT RULES:
 - Keep responses SHORT and conversational (1-3 sentences max)
-- Reply like a smart friend texting, not writing an essay
-- Only explain in detail if user specifically asks "explain" or "tell me more"
+- Reply like a smart, caring friend who is also professional
+- Always address the user respectfully (use "aap" style respect, never "tu")
+- Make EVERY user feel comfortable, respected and welcome
 - Never use markdown (*, #, _, backticks)
 - Write exactly how you'd speak naturally
 ${langLine}${toneLine}
@@ -140,7 +326,20 @@ ${memoryBlock}`;
 
         const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory];
 
-        const result = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: contents });
+        let result;
+        try {
+            result = await generateWithFallback(contents);
+        } catch (fallbackErr) {
+            const errMsg = String(fallbackErr.message || fallbackErr).toLowerCase();
+            if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
+                console.warn("⚠️ All models quota exhausted — sending friendly message");
+                const friendlyMsg = "VED AI abhi thodi der ke liye vyast hai. Kripya 1-2 minute baad dobara prayas karein. Dhanyavaad! 🙏";
+                db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", friendlyMsg]);
+                return res.json({ reply: friendlyMsg, quotaExhausted: true });
+            }
+            throw fallbackErr;
+        }
+
         const reply = result.candidates[0].content.parts[0].text;
 
         console.log("🤖 VED:", reply);
@@ -151,12 +350,12 @@ ${memoryBlock}`;
 
     } catch (error) {
         console.error("❌ Server Error:", error);
-        res.status(500).json({ reply: "Something went wrong 😥" });
+        res.status(500).json({ reply: "Kuch gadbad ho gayi. Kripya dobara prayas karein. 🙏" });
     }
 });
 
 // ===============================
-// VISION ROUTE
+// VISION ROUTE (trilingual + fallback)
 // ===============================
 app.post("/vision", async (req, res) => {
     try {
@@ -169,12 +368,11 @@ app.post("/vision", async (req, res) => {
         console.log("📷 Photo question:", question);
         db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Photo] " + question]);
 
-        const visionPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Answer the user's question about the attached photo naturally.\nQuestion: ${question}`;
+        const visionPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Answer the user's question about the attached photo naturally.\nQuestion: ${question}`;
 
-        const result = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: [{ role: "user", parts: [{ text: visionPrompt }, { inlineData: { mimeType: "image/jpeg", data: base64Data } }] }]
-        });
+        const result = await generateWithFallback([
+            { role: "user", parts: [{ text: visionPrompt }, { inlineData: { mimeType: "image/jpeg", data: base64Data } }] }
+        ]);
 
         const reply = result.candidates[0].content.parts[0].text;
         console.log("🤖 VED (vision):", reply);
@@ -183,12 +381,12 @@ app.post("/vision", async (req, res) => {
 
     } catch (error) {
         console.error("❌ Vision Error:", error);
-        res.status(500).json({ reply: "Something went wrong while looking at that photo 😥" });
+        res.status(500).json({ reply: "Photo dekhne mein dikkat aayi. Kripya dobara prayas karein. 🙏" });
     }
 });
 
 // ===============================
-// DOCUMENT ROUTE
+// DOCUMENT ROUTE (trilingual + fallback)
 // ===============================
 app.post("/document", async (req, res) => {
     try {
@@ -206,12 +404,11 @@ app.post("/document", async (req, res) => {
         console.log("📄 Document question:", question);
         db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Document] " + question]);
 
-        const docPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Use the document content below to answer.\nDocument content:\n${text}\nQuestion: ${question}`;
+        const docPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Use the document content below to answer.\nDocument content:\n${text}\nQuestion: ${question}`;
 
-        const result = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: [{ role: "user", parts: [{ text: docPrompt }] }]
-        });
+        const result = await generateWithFallback([
+            { role: "user", parts: [{ text: docPrompt }] }
+        ]);
 
         const reply = result.candidates[0].content.parts[0].text;
         console.log("🤖 VED (document):", reply);
@@ -220,7 +417,7 @@ app.post("/document", async (req, res) => {
 
     } catch (error) {
         console.error("❌ Document Error:", error);
-        res.status(500).json({ reply: "Something went wrong while reading that document 😥" });
+        res.status(500).json({ reply: "Document padhne mein dikkat aayi. Kripya dobara prayas karein. 🙏" });
     }
 });
 
@@ -253,7 +450,7 @@ app.get("/blacklist", (req, res) => {
 });
 
 // ===============================
-// SCAM CHECK ROUTE (HYBRID + BLACKLIST)
+// SCAM CHECK ROUTE (HYBRID + BLACKLIST + fallback)
 // ===============================
 app.post("/check-scam", async (req, res) => {
     try {
@@ -301,10 +498,9 @@ ACTION: [One clear action, e.g. "Link par click mat karo" ya "Ye safe hai, chint
 
 Message: "${suspiciousMessage}"`;
 
-            const result = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: [{ role: "user", parts: [{ text: scamPrompt }] }]
-            });
+            const result = await generateWithFallback([
+                { role: "user", parts: [{ text: scamPrompt }] }
+            ]);
             reply = result.candidates[0].content.parts[0].text;
         } catch (e) {
             reply = "VERDICT: " + radar.radarVerdict +
