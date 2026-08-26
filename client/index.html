@@ -492,5 +492,36 @@
         if (bd) { bd.style.display = ''; bd.style.position = ''; }
     }, true);
 </script>
+<!-- ➕ NEW CHAT FIRST-TAP FIX (pointerdown + guard) -->
+<script>
+(function () {
+    var last = 0;
+    function doNewChat() {
+        var now = Date.now();
+        if (now - last < 600) return; // double-fire se bachao
+        last = now;
+        var box = document.getElementById('chatMessages');
+        if (box) box.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
+        var inp = document.getElementById('userInput');
+        if (inp) inp.value = '';
+        document.body.classList.remove('chat-active');
+        var sb = document.querySelector('.sidebar');
+        var bd = document.getElementById('mobileBackdrop');
+        if (sb) {
+            sb.style.display = ''; sb.style.transform = '';
+            sb.style.position = ''; sb.style.zIndex = '';
+            sb.classList.remove('open');
+        }
+        if (bd) { bd.style.display = ''; bd.style.position = ''; bd.classList.remove('open', 'visible'); }
+        document.body.classList.remove('menu-open', 'sidebar-open');
+    }
+    ['pointerdown', 'touchend', 'click'].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+            var t = e.target;
+            if (t && t.closest && t.closest('#newChatBtn')) doNewChat();
+        }, true);
+    });
+})();
+</script>
 </body>
 </html>
