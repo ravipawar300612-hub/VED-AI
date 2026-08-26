@@ -422,6 +422,41 @@
     }, true);
 })();
 </script>
-
+<!-- 👆 TOUCH FIX + TAP X-RAY -->
+<script>
+(function () {
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);';
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 3000);
+    }
+    function doNewChat() {
+        var box = document.getElementById('chatMessages');
+        if (box) box.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
+        var inp = document.getElementById('userInput');
+        if (inp) inp.value = '';
+        document.body.classList.remove('chat-active');
+        var sb = document.querySelector('.sidebar');
+        var bd = document.getElementById('mobileBackdrop');
+        if (sb) { sb.style.display = ''; sb.style.transform = ''; sb.style.position = ''; sb.style.zIndex = ''; }
+        if (bd) { bd.style.display = ''; bd.style.position = ''; }
+        toast('✅ Nayi chat shuru!');
+    }
+    document.addEventListener('touchend', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('#newChatBtn')) {
+            e.preventDefault();
+            doNewChat();
+            return;
+        }
+        if (t.closest('.sidebar')) {
+            toast('👆 Sidebar tap: ' + (t.id ? '#' + t.id : t.tagName));
+        }
+    }, true);
+})();
+</script>
 </body>
 </html>
