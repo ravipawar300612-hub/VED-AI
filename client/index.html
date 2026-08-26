@@ -38,14 +38,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=2092">
-    <link rel="stylesheet" href="css/voice-mode.css?v=2092">
-    <link rel="stylesheet" href="css/camera-mode.css?v=2092">
-    <link rel="stylesheet" href="css/sidebar.css?v=2092">
-    <link rel="stylesheet" href="css/loading.css?v=2092">
-    <link rel="stylesheet" href="css/mobile.css?v=2092">
-    <link rel="stylesheet" href="css/suraksha.css?v=2092">
-    <link rel="stylesheet" href="css/missions.css?v=2092">
+    <link rel="stylesheet" href="style.css?v=2102">
+    <link rel="stylesheet" href="css/voice-mode.css?v=2102">
+    <link rel="stylesheet" href="css/camera-mode.css?v=2102">
+    <link rel="stylesheet" href="css/sidebar.css?v=2102">
+    <link rel="stylesheet" href="css/loading.css?v=2102">
+    <link rel="stylesheet" href="css/mobile.css?v=2102">
+    <link rel="stylesheet" href="css/suraksha.css?v=2102">
+    <link rel="stylesheet" href="css/missions.css?v=2102">
 
     <style>
         html { background: #0b0f14; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -60,7 +60,7 @@
 
 <body>
 
-<!-- ✨ PREMIUM LOADING SCREEN OVERLAY -->
+<!-- ✨ PREMIUM LOADING SCREEN -->
 <div id="loading-screen">
     <div id="particles"></div>
     <div class="center-content">
@@ -70,7 +70,6 @@
         <div class="progress-container"><div id="progress-bar"></div></div>
         <p id="quote">Every intelligent system starts with a single thought.</p>
     </div>
-    <!-- 🎬 NETFLIX SKIP INTRO (HARDCODED) -->
     <button id="vedSkipBtn" type="button">Skip Intro →</button>
 </div>
 
@@ -95,7 +94,7 @@
     });
 </script>
 
-<!-- 📱 MOBILE HAMBURGER BUTTON + BACKDROP -->
+<!-- 📱 MOBILE HAMBURGER + BACKDROP -->
 <button id="mobileMenuBtn" aria-label="Open menu">☰</button>
 <div id="mobileBackdrop"></div>
 
@@ -157,7 +156,7 @@
     </div>
 </div>
 
-<!-- ================= VOICE MODE OVERLAY ================= -->
+<!-- ================= VOICE OVERLAY ================= -->
 <div id="voiceOverlay" data-state="idle">
     <button id="voiceExitBtn" class="voice-exit-btn" type="button" aria-label="Exit voice mode">← Back</button>
     <div class="voice-brand"><img src="logo.png" alt="VED AI logo"><div class="voice-name">VED</div></div>
@@ -167,7 +166,7 @@
     <div id="voiceTranscript" class="voice-transcript"></div>
 </div>
 
-<!-- ================= CAMERA MODE OVERLAY ================= -->
+<!-- ================= CAMERA OVERLAY ================= -->
 <div id="cameraOverlay" data-stage="live">
     <button id="cameraExitBtn" class="camera-exit-btn" type="button" aria-label="Exit camera mode">← Back</button>
     <div class="camera-frame"><video id="cameraVideo" autoplay playsinline muted></video><img id="cameraPreviewImg" alt="Captured photo"></div>
@@ -182,21 +181,21 @@
     <div id="cameraStatus" class="camera-status"></div>
 </div>
 
-<!-- Scripts (naya version number = purana cache khatam) -->
-<script src="js/authGuard.js?v=2092"></script>
-<script src="js/sidebar.js?v=2092"></script>
-<script src="js/speechEngine.js?v=2092"></script>
-<script src="js/voiceMode.js?v=2092"></script>
-<script src="js/wakeWord.js?v=2092"></script>
-<script src="js/cameraEngine.js?v=2092"></script>
-<script src="js/cameraMode.js?v=2092"></script>
-<script src="script_new.js?v=2092"></script>
-<script src="js/loading.js?v=2092"></script>
-<script src="js/mobileMenu.js?v=2092"></script>
-<script src="js/suraksha.js?v=2092"></script>
-<script src="js/healthMode.js?v=2092"></script>
-<script src="js/cropMode.js?v=2092"></script>
-<script src="js/missions.js?v=2092"></script>
+<!-- Scripts -->
+<script src="js/authGuard.js?v=2102"></script>
+<script src="js/sidebar.js?v=2102"></script>
+<script src="js/speechEngine.js?v=2102"></script>
+<script src="js/voiceMode.js?v=2102"></script>
+<script src="js/wakeWord.js?v=2102"></script>
+<script src="js/cameraEngine.js?v=2102"></script>
+<script src="js/cameraMode.js?v=2102"></script>
+<script src="script_new.js?v=2102"></script>
+<script src="js/loading.js?v=2102"></script>
+<script src="js/mobileMenu.js?v=2102"></script>
+<script src="js/suraksha.js?v=2102"></script>
+<script src="js/healthMode.js?v=2102"></script>
+<script src="js/cropMode.js?v=2102"></script>
+<script src="js/missions.js?v=2102"></script>
 
 <!-- 🎬 CINEMATIC TRANSITION -->
 <script>
@@ -249,7 +248,7 @@
     (function () { var inp = document.getElementById('userInput'); if (inp) inp.placeholder = 'Ask anything...'; })();
 </script>
 
-<!-- 🔙 GLASS BACK BUTTON STYLE -->
+<!-- 🔙 GLASS BACK BUTTONS -->
 <style>
     #voiceExitBtn, #cameraExitBtn {
         position: fixed !important; top: 18px !important; left: 16px !important; width: auto !important;
@@ -264,8 +263,6 @@
     }
     #voiceExitBtn:active, #cameraExitBtn:active { transform: scale(0.94) !important; background: rgba(255,255,255,0.15) !important; }
 </style>
-
-<!-- 🔙 BACK BUTTON CLEAN FIX v2 (NO display:none lock — isi se voice stuck hota tha!) -->
 <script>
 (function () {
     function unlockOverlays() {
@@ -296,7 +293,7 @@
 })();
 </script>
 
-<!-- 🎬 CINEMA FOCUS MODE — Wallpaper → Black -->
+<!-- 🎬 CINEMA FOCUS MODE -->
 <style>
     .app { position: relative; z-index: 2; }
     body::after {
@@ -307,19 +304,8 @@
     body.chat-active { background-image: none !important; background-color: #000000 !important; }
     body.chat-active .main, body.chat-active .container { color: #ffffff; }
 </style>
-<script>
-(function () {
-    var nc = document.getElementById('newChatBtn');
-    var box = document.getElementById('chatMessages');
-    if (nc) nc.addEventListener('click', function () {
-        setTimeout(function () {
-            if (box && box.children.length <= 1) document.body.classList.remove('chat-active');
-        }, 300);
-    });
-})();
-</script>
 
-<!-- 🎤 VOICE DETECTIVE TOAST -->
+<!-- 🩻 VOICE X-RAY (Papa phone debug) -->
 <script>
 (function () {
     function toast(msg) {
@@ -331,79 +317,36 @@
     }
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     var mic = document.getElementById('micBtn');
-    if (!mic) return;
-    mic.addEventListener('click', function () {
-        if (!SR) toast('⚠️ Is browser mein Voice Mode nahi chalta — please CHROME mein kholein');
+    if (mic) mic.addEventListener('click', function () {
+        toast('🔍 Voice support: ' + (SR ? 'YES ✅' : 'NO ❌'));
     }, true);
-})();
-</script>
-<!-- 🔍 VOICE X-RAY DEBUG -->
-<script>
-(function () {
-    function toast(msg) {
-        var t = document.createElement('div');
-        t.textContent = msg;
-        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);box-shadow:0 6px 20px rgba(0,0,0,0.6);';
-        document.body.appendChild(t);
-        setTimeout(function () { t.remove(); }, 6000);
-    }
-    var mic = document.getElementById('micBtn');
-    if (!mic) return;
-    mic.addEventListener('click', function () {
-        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        toast('🔍 Mic tap hua! Voice support: ' + (SR ? 'YES ✅' : 'NO ❌'));
-        if (!SR) return;
-        try {
-            navigator.permissions.query({ name: 'microphone' }).then(function (p) {
-                toast('🎤 Mic permission: ' + p.state.toUpperCase());
-            }).catch(function () {});
-        } catch (e) {}
-    }, true);
-})();
-</script>
-<!-- 🩻 VOICE X-RAY v2 — engine ki har harkat -->
-<script>
-(function () {
-    function toast(msg) {
-        var t = document.createElement('div');
-        t.textContent = msg;
-        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);box-shadow:0 6px 20px rgba(0,0,0,0.6);';
-        document.body.appendChild(t);
-        setTimeout(function () { t.remove(); }, 6000);
-    }
-
-    // 1) Overlay state changes dikhao
-    var o = document.getElementById('voiceOverlay');
-    if (o && window.MutationObserver) {
-        new MutationObserver(function () {
-            toast('📊 State: ' + (o.dataset.state || '?') + (o.classList.contains('active') ? ' (open)' : ' (closed)'));
-        }).observe(o, { attributes: true, attributeFilter: ['data-state', 'class'] });
-    }
-
-    // 2) SpeechEngine ke errors pakdo
     if (window.SpeechEngine && SpeechEngine.startListening) {
         var orig = SpeechEngine.startListening.bind(SpeechEngine);
         SpeechEngine.startListening = function (opts) {
             var o2 = opts || {};
-            var ue = o2.onError, uf = o2.onFinal;
+            var ue = o2.onError;
             o2.onError = function (err) {
-                var code = (err && err.error) ? err.error : String(err);
-                toast('❌ SR error: ' + code);
+                toast('❌ SR error: ' + ((err && err.error) ? err.error : String(err)));
                 if (ue) ue(err);
-            };
-            o2.onFinal = function (t) {
-                toast('🗣️ VED ne suna: "' + String(t).slice(0, 25) + '"');
-                if (uf) uf(t);
             };
             return orig(o2);
         };
     }
 })();
 </script>
+
 <!-- 📱 MOBILE SIDEBAR FORCE FIX + CHAT BOTTOM ANCHOR -->
 <style>
     .chat-box { display: flex; flex-direction: column; }
     .chat-box > :first-child { margin-top: auto; }
+    #mobileMenuBtn {
+        position: fixed !important; top: 16px !important; left: 16px !important;
+        z-index: 9999999 !important; width: 46px !important; height: 46px !important;
+        border-radius: 12px !important; background: rgba(15,18,24,0.85) !important;
+        backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important;
+        color: #ffffff !important; border: 1px solid rgba(255,255,255,0.2) !important;
+        font-size: 20px !important; cursor: pointer !important;
+    }
 </style>
 <script>
 (function () {
@@ -415,19 +358,17 @@
     function openSb() {
         sb.style.position = 'fixed';
         sb.style.top = '0'; sb.style.left = '0'; sb.style.bottom = '0';
-        sb.style.width = '280px';
-        sb.style.maxWidth = '85vw';
+        sb.style.width = '280px'; sb.style.maxWidth = '85vw';
         sb.style.transform = 'translateX(0)';
         sb.style.display = 'block';
         sb.style.zIndex = '999999';
         sb.style.overflowY = 'auto';
-                sb.style.pointerEvents = 'auto';
         sb.style.background = '#10151c';
+        sb.style.pointerEvents = 'auto';
         if (bd) {
             bd.style.display = 'block';
             bd.style.position = 'fixed';
-            bd.style.top = '0'; bd.style.left = '0';
-            bd.style.right = '0'; bd.style.bottom = '0';
+            bd.style.top = '0'; bd.style.left = '0'; bd.style.right = '0'; bd.style.bottom = '0';
             bd.style.background = 'rgba(0,0,0,0.55)';
             bd.style.zIndex = '999998';
         }
@@ -445,50 +386,42 @@
     if (bd) bd.addEventListener('click', function (e) {
         e.stopImmediatePropagation(); closeSb();
     }, true);
-    ['newChatBtn', 'sidebarCollapseBtn'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener('click', function () { setTimeout(closeSb, 150); });
-    });
+    document.getElementById('sidebarCollapseBtn') &&
+        document.getElementById('sidebarCollapseBtn').addEventListener('click', function () { setTimeout(closeSb, 150); });
 })();
 </script>
-<!-- 🍔 HAMBURGER BUTTON KO COMA SE BAHAR NIKALO -->
-<style>
-    #mobileMenuBtn {
-        position: fixed !important;
-        top: 16px !important;
-        left: 16px !important;
-        z-index: 9999999 !important;
-        width: 46px !important;
-        height: 46px !important;
-        border-radius: 12px !important;
-        background: rgba(15, 18, 24, 0.85) !important;
-        backdrop-filter: blur(10px) !important;
-        -webkit-backdrop-filter: blur(10px) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        font-size: 20px !important;
-        cursor: pointer !important;
-    }
-</style>
-<!-- ➕ NUCLEAR NEW CHAT FIX -->
+
+<!-- ➕ NEW CHAT NUCLEAR v2 -->
 <script>
 (function () {
-    var nc = document.getElementById('newChatBtn');
-    if (!nc) return;
-    nc.addEventListener('click', function () {
-        setTimeout(function () {
+    var sb = document.querySelector('.sidebar');
+    if (sb) {
+        sb.style.pointerEvents = 'auto';
+        sb.querySelectorAll('button, input').forEach(function (el) { el.style.pointerEvents = 'auto'; });
+    }
+    document.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('#newChatBtn')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
             var box = document.getElementById('chatMessages');
             if (box) box.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
             var inp = document.getElementById('userInput');
             if (inp) inp.value = '';
             document.body.classList.remove('chat-active');
-            var sb = document.querySelector('.sidebar');
             var bd = document.getElementById('mobileBackdrop');
             if (sb) { sb.style.display = ''; sb.style.transform = ''; sb.style.position = ''; sb.style.zIndex = ''; }
             if (bd) { bd.style.display = ''; bd.style.position = ''; }
-        }, 250);
+            var toast = document.createElement('div');
+            toast.textContent = '✅ Nayi chat shuru!';
+            toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;border:1px solid rgba(255,255,255,0.25);';
+            document.body.appendChild(toast);
+            setTimeout(function () { toast.remove(); }, 2500);
+        }
     }, true);
 })();
 </script>
+
 </body>
 </html>
