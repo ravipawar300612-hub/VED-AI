@@ -171,6 +171,7 @@ const SpeechEngine = (function () {
         window.speechSynthesis.cancel();
         stopCurrentAudio();
 
+       
         const cleanText = String(text)
             .replace(/[#*_`~]/g, "")
             .replace(/https?:\/\/\S+/g, " link ")
@@ -202,6 +203,15 @@ const SpeechEngine = (function () {
         });
     }
 
+    app.post("/tts", async (req, res) => {
+    const voiceId = process.env.ELEVENLABS_VOICE_ID;
+
+    // Use voiceId in the ElevenLabs URL:
+    const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+
+    // ...existing ElevenLabs request code...
+});
+
     // ---------- FALLBACK: BROWSER VOICE ----------
     function browserSpeak(text, { onStart, onAmplitude, onEnd } = {}) {
         const utterance = new SpeechSynthesisUtterance(text);
@@ -217,17 +227,45 @@ const SpeechEngine = (function () {
         window.speechSynthesis.speak(utterance);
     }
 
+    // function pickBestVoice() {
+    //     const voices = window.speechSynthesis.getVoices();
+    //     if (!voices.length) return null;
+    //     return (
+    //         voices.find(v => v.lang === "en-IN") ||
+    //         voices.find(v => v.lang === "en-US") ||
+    //         voices.find(v => v.name.includes("Google US English")) ||
+    //         voices.find(v => v.lang.startsWith("en")) ||
+    //         voices[0]
+    //     );
+    // }
+
     function pickBestVoice() {
-        const voices = window.speechSynthesis.getVoices();
-        if (!voices.length) return null;
-        return (
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+
+    const savedVoiceURI = localStorage.getItem("vedPreferredVoice");
+
+    let voice = voices.find(v => v.voiceURI === savedVoiceURI);
+
+    if (!voice) {
+        voice =
+            voices.find(v => v.name === "Google US English") ||
             voices.find(v => v.lang === "en-IN") ||
             voices.find(v => v.lang === "en-US") ||
-            voices.find(v => v.name.includes("Google US English")) ||
             voices.find(v => v.lang.startsWith("en")) ||
-            voices[0]
-        );
+            voices[0];
+
+        if (voice) {
+            localStorage.setItem("vedPreferredVoice", voice.voiceURI);
+        }
     }
+
+    return voice;
+}
+
+if ("speechSynthesis" in window) {
+    window.speechSynthesis.addEventListener("voiceschanged", pickBestVoice);
+}
 
     function cancelSpeaking() {
         window.speechSynthesis.cancel();
