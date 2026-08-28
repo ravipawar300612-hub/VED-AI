@@ -1,21 +1,71 @@
-<!-- Inside client/voice.html -->
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
-    <!-- Include your typical CSS assets here -->
-    <link rel="stylesheet" href="css/voice-mode.css">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>VED Live</title>
+
+    <link rel="stylesheet" href="voice.css">
+
 </head>
+
 <body>
 
-    <div id="voice-container">
-        <p id="chatbot-status-prompt">Tap mic to start</p>
-        <div id="speech-transcript-view">...</div>
-        
-        <div id="wave-canvas-container" style="opacity:0; transition: transform 0.1s ease;">
-            <!-- Your canvas or wave design element inside here -->
-        </div>
+<div class="voice-container">
 
-        <button id="mic-toggle-btn">🎙️</button>
+    <!-- Exit -->
+
+    <button id="closeBtn">
+        ✕
+    </button>
+
+    <!-- Logo -->
+
+    <img src="logo.png" class="logo">
+
+    <!-- AI Name -->
+
+    <h1>VED</h1>
+
+    <!-- Status -->
+
+    <p id="status">
+
+        🎤 Listening...
+
+    </p>
+
+    <!-- AI Orb -->
+
+    <div class="orb">
+
+        <div class="ring"></div>
+
+        <div class="ring2"></div>
+
+        <div class="core"></div>
+
     </div>
 
-    <!-- ENTERPRISE ENTRYPOINT LINK -->
-    <script type="module" src="js/voiceMode.js"></script>
+    <!-- Wave -->
+
+    <div class="wave">
+
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+
+    </div>
+
+</div>
+
+<script src="voice.js"></script>
+
 </body>
+
+</html>

@@ -1,191 +1,226 @@
 // ==========================================
-// VED AI — ENTERPRISE SPEECH ENGINE (FIXED)
-// Native Speech Rec + Audio Streaming Router
+// VED AI — SPEECH ENGINE (FIXED FOR PHONES)
+// Real natural voice + browser fallback
+// Founder: Sayali P. R. Pawar
 // ==========================================
 
-import { ChatbotState } from './stateEngine.js';
+const SpeechEngine = (function () {
 
-export const SpeechEngine = (function () {
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionAPI =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
     let recognition = null;
+    let restartCount = 0;
+    const MAX_RESTARTS = 5;
     let currentAudio = null;
-    let simulatedWaveInterval = null;
-    let onAmplitudeCallback = null;
+    let simulatedLoopId = null;
+    let isExplicitlyStopped = false;
 
-    // Check configuration safety hooks
+    if (SpeechRecognitionAPI) {
+        recognition = new SpeechRecognitionAPI();
+        recognition.lang = "hi-IN";
+        // Note: Mobile browsers ignore continuous=true, so we manage re-entry in onend
+        recognition.continuous = false; 
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+    }
+
     const isSupported = !!SpeechRecognitionAPI;
+    let currentCallbacks = null;
 
-    function init(callbacks = {}) {
-        if (!isSupported) {
-            console.error("❌ Web Speech API is not supported in this browser environment.");
+    // ---------- LISTENING ----------
+    function startListening(callbacks = {}) {
+        if (!recognition) {
+            if (callbacks.onError) callbacks.onError(new Error("SpeechRecognition not supported"));
             return;
         }
 
-        onAmplitudeCallback = callbacks.onAmplitude || null;
+        currentCallbacks = callbacks;
+        restartCount = 0;
+        isExplicitlyStopped = false;
+        attachHandlers();
 
-        recognition = new SpeechRecognitionAPI();
-        recognition.lang = "hi-IN"; // Set for target localized input engine
-        recognition.continuous = false; // Kept false: stable standard for mobile memory channels
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
-
-        // Bind core Web Speech thread events
-        bindHardwareEvents(callbacks);
-
-        // Connect this engine directly to the central state coordinator
-        ChatbotState.subscribe((state, payload) => {
-            handleStateChange(state, payload, callbacks);
-        });
+        try {
+            recognition.start();
+        } catch (e) {
+            console.warn("Recognition already running, aborting and restarting safely...");
+            recognition.abort(); // Clears thread locks on mobile
+            setTimeout(() => {
+                try { if(!isExplicitlyStopped) recognition.start(); } catch (err) {}
+            }, 400);
+        }
     }
 
-    function bindHardwareEvents(callbacks) {
+    function attachHandlers() {
+        if (!recognition || !currentCallbacks) return;
+
+        const { onInterim, onFinal, onEnd, onError } = currentCallbacks;
+
         recognition.onresult = (event) => {
-            let interimText = "";
             let finalText = "";
-
+            let interimText = "";
+            
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                // Mobile Patch: Discard zero confidence audio frames
-                if (event.results[i].confidence === 0 && event.results[i].isFinal) continue;
-
-                const transcript = event.results[i].transcript;
+                // Mobile Fix: Ignore empty anomalies or zero confidence frames
+                if (event.results[i][0].confidence === 0 && event.results[i].isFinal) {
+                    continue;
+                }
+                
+                const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
                     finalText += transcript;
                 } else {
                     interimText += transcript;
                 }
             }
-
-            if (interimText && callbacks.onInterimText) {
-                callbacks.onInterimText(interimText);
-            }
-
-            if (finalText.trim()) {
-                // Instantly advance state to processing to kill mic locks
-                ChatbotState.transitionTo('THINKING', finalText.trim());
+            
+            if (interimText && onInterim) onInterim(interimText);
+            if (finalText) {
+                restartCount = 0; 
+                if (onFinal) onFinal(finalText);
             }
         };
 
         recognition.onend = () => {
-            // Mobile Auto-Restart Workaround: Gives OS time to release hardware allocations
-            if (ChatbotState.current === 'LISTENING') {
+            if (isExplicitlyStopped) {
+                if (onEnd) onEnd();
+                return;
+            }
+
+            // Mobile Auto-Restart Workaround (Gives OS time to clean up hardware locks)
+            if (restartCount < MAX_RESTARTS && currentCallbacks) {
+                restartCount++;
                 setTimeout(() => {
                     try {
-                        if (ChatbotState.current === 'LISTENING') recognition.start();
+                        if (currentCallbacks && !isExplicitlyStopped) {
+                            recognition.start();
+                        }
                     } catch (e) {
-                        // Quick-force cycle if lock persists
-                        try { recognition.abort(); setTimeout(() => recognition.start(), 300); } catch(err){}
+                        // Fallback retry if OS was still busy
+                        recognition.abort();
+                        setTimeout(() => { try { recognition.start(); } catch(err){} }, 500);
                     }
-                }, 400); 
+                }, 400); // 400ms delay protects mobile memory channels
+            } else {
+                if (onEnd) onEnd();
             }
         };
 
         recognition.onerror = (e) => {
             if (e.error === 'not-allowed') {
-                console.error("❌ Mic access blocked. Ensure app runs via HTTPS.");
-                ChatbotState.transitionTo('IDLE');
+                console.error("❌ Mic permission denied by user or unsecure origin (HTTP)");
+                isExplicitlyStopped = true;
             }
+            if (onError) onError(e);
         };
     }
 
-    function handleStateChange(state, payload, callbacks) {
-        switch (state) {
-            case 'LISTENING':
-                cancelSpeaking();
-                if (callbacks.onListeningStart) callbacks.onListeningStart();
-                try { recognition.start(); } catch (e) {}
-                break;
-
-            case 'THINKING':
-                try { recognition.abort(); } catch (e) {} // Instantly free up audio thread
-                if (callbacks.onThinkingStart) callbacks.onThinkingStart();
-                break;
-
-            case 'SPEAKING':
-                try { recognition.abort(); } catch (e) {}
-                executeTextToSpeech(payload, callbacks);
-                break;
-
-            case 'IDLE':
-                try { recognition.abort(); } catch (e) {}
-                cancelSpeaking();
-                if (callbacks.onIdle) callbacks.onIdle();
-                break;
+    function stopListening() {
+        isExplicitlyStopped = true;
+        restartCount = MAX_RESTARTS; 
+        if (recognition) {
+            try { recognition.abort(); } catch (e) {}
         }
+        currentCallbacks = null;
     }
 
-    function executeTextToSpeech(text, callbacks) {
-        if (!text) { ChatbotState.transitionTo('LISTENING'); return; }
+    // ---------- SIMULATED WAVEFORM ----------
+    function startSimulatedWave(onAmplitude) {
+        if (!onAmplitude) return;
+        stopSimulatedWave();
+        simulatedLoopId = setInterval(() => onAmplitude(0.25 + Math.random() * 0.75), 90);
+    }
+    
+    function stopSimulatedWave() {
+        if (simulatedLoopId) clearInterval(simulatedLoopId);
+        simulatedLoopId = null;
+    }
 
-        // Sanitize characters matching Markdown or emojis
+    function stopCurrentAudio() {
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        stopSimulatedWave();
+    }
+
+    // ---------- SPEAKING ----------
+    function speak(text, { onStart, onAmplitude, onEnd } = {}) {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        stopCurrentAudio();
+
         const cleanText = String(text)
             .replace(/[#*_`~]/g, "")
-            .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+            .replace(/https?:\/\/\S+/g, " link ")
+            .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2764}]/gu, "")
             .trim();
 
-        fetch("/api/tts", { 
+        if (!cleanText) { if (onEnd) onEnd(); return; }
+
+        fetch("/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: cleanText })
         })
         .then(res => {
-            if (!res.ok) throw new Error("TTS Route unreachable");
+            if (!res.ok) throw new Error("TTS server error " + res.status);
             return res.blob();
         })
         .then(blob => {
-            const audioUrl = URL.createObjectURL(blob);
-            currentAudio = new Audio(audioUrl);
-
-            currentAudio.onplay = () => {
-                startWaveSimulation();
-                if (callbacks.onSpeakingStart) callbacks.onSpeakingStart();
-            };
-
-            currentAudio.onended = () => {
-                stopWaveSimulation();
-                URL.revokeObjectURL(audioUrl);
-                currentAudio = null;
-                // Yellow.ai pattern: automatically jump back to listening loop
-                ChatbotState.transitionTo('LISTENING');
-            };
-
-            currentAudio.play().catch(() => browserFallbackSpeak(cleanText));
+            const url = URL.createObjectURL(blob);
+            currentAudio = new Audio(url);
+            currentAudio.onplay = () => { startSimulatedWave(onAmplitude); if (onStart) onStart(); };
+            currentAudio.onended = () => { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; if (onEnd) onEnd(); };
+            currentAudio.onerror = () => { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; if (onEnd) onEnd(); };
+            return currentAudio.play();
         })
-        .catch(() => browserFallbackSpeak(cleanText));
+        .catch(err => {
+            console.warn("⚠️ ElevenLabs unavailable, browser voice fallback:", err.message);
+            browserSpeak(cleanText, { onStart, onAmplitude, onEnd });
+        });
     }
 
-    function browserFallbackSpeak(text) {
-        if (!window.speechSynthesis) { ChatbotState.transitionTo('LISTENING'); return; }
-        window.speechSynthesis.cancel();
-
+    // ---------- FALLBACK: BROWSER VOICE ----------
+    function browserSpeak(text, { onStart, onAmplitude, onEnd } = {}) {
+        if (!window.speechSynthesis) return;
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "hi-IN";
-
-        utterance.onstart = () => { startWaveSimulation(); };
-        utterance.onend = () => { stopWaveSimulation(); ChatbotState.transitionTo('LISTENING'); };
-        utterance.onerror = () => { stopWaveSimulation(); ChatbotState.transitionTo('LISTENING'); };
-
+        const voice = pickBestVoice();
+        if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
+        else utterance.lang = "en-US";
+        
+        utterance.onstart = () => { startSimulatedWave(onAmplitude); if (onStart) onStart(); };
+        utterance.onend = () => { stopSimulatedWave(); if (onEnd) onEnd(); };
+        utterance.onerror = () => { stopSimulatedWave(); if (onEnd) onEnd(); };
         window.speechSynthesis.speak(utterance);
     }
 
-    function startWaveSimulation() {
-        if (simulatedWaveInterval || !onAmplitudeCallback) return;
-        simulatedWaveInterval = setInterval(() => {
-            const amplitude = 0.2 + Math.random() * 0.8;
-            onAmplitudeCallback(amplitude);
-        }, 80);
+    function pickBestVoice() {
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices.length) return null;
+
+        const savedVoiceURI = localStorage.getItem("vedPreferredVoice");
+        let voice = voices.find(v => v.voiceURI === savedVoiceURI);
+
+        if (!voice) {
+            voice =
+                voices.find(v => v.name === "Google US English") ||
+                voices.find(v => v.lang === "en-IN") ||
+                voices.find(v => v.lang === "en-US") ||
+                voices.find(v => v.lang.startsWith("en")) ||
+                voices[0];
+
+            if (voice) {
+                localStorage.setItem("vedPreferredVoice", voice.voiceURI);
+            }
+        }
+        return voice;
     }
 
-    function stopWaveSimulation() {
-        if (simulatedWaveInterval) clearInterval(simulatedWaveInterval);
-        simulatedWaveInterval = null;
-        if (onAmplitudeCallback) onAmplitudeCallback(0);
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.addEventListener("voiceschanged", pickBestVoice);
     }
 
     function cancelSpeaking() {
         if (window.speechSynthesis) window.speechSynthesis.cancel();
-        if (currentAudio) { try { currentAudio.pause(); } catch(e){} currentAudio = null; }
-        stopWaveSimulation();
+        stopCurrentAudio();
     }
 
-    return { init, isSupported };
+    return { isSupported, startListening, stopListening, speak, cancelSpeaking };
 })();
