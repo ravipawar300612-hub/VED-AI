@@ -1,6 +1,6 @@
 // ==========================================
-// VED AI — SPEECH ENGINE (FIXED FOR PHONES)
-// Real natural voice + browser fallback
+// VED AI — SPEECH ENGINE (LIVE TALK RESTORED)
+// Continuous listening + Hinglish support
 // Founder: Sayali P. R. Pawar
 // ==========================================
 
@@ -11,16 +11,17 @@ const SpeechEngine = (function () {
 
     let recognition = null;
     let restartCount = 0;
-    const MAX_RESTARTS = 5;
+    const MAX_RESTARTS = 15; // Increased for continuous talk
     let currentAudio = null;
     let simulatedLoopId = null;
     let isExplicitlyStopped = false;
+    let lastFinalTime = 0;
 
     if (SpeechRecognitionAPI) {
         recognition = new SpeechRecognitionAPI();
-        recognition.lang = "hi-IN";
-        // Note: Mobile browsers ignore continuous=true, so we manage re-entry in onend
-        recognition.continuous = false; 
+        // en-IN = Hindi + Hinglish + English (sab sunta hai!)
+        recognition.lang = "en-IN";
+        recognition.continuous = true; // LIVE TALK mode on!
         recognition.interimResults = true;
         recognition.maxAlternatives = 1;
     }
@@ -38,13 +39,14 @@ const SpeechEngine = (function () {
         currentCallbacks = callbacks;
         restartCount = 0;
         isExplicitlyStopped = false;
+        lastFinalTime = Date.now();
         attachHandlers();
 
         try {
             recognition.start();
         } catch (e) {
             console.warn("Recognition already running, aborting and restarting safely...");
-            recognition.abort(); // Clears thread locks on mobile
+            recognition.abort();
             setTimeout(() => {
                 try { if(!isExplicitlyStopped) recognition.start(); } catch (err) {}
             }, 400);
@@ -69,16 +71,15 @@ const SpeechEngine = (function () {
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
                     finalText += transcript;
+                    lastFinalTime = Date.now();
+                    restartCount = 0; // Reset on successful final
                 } else {
                     interimText += transcript;
                 }
             }
             
             if (interimText && onInterim) onInterim(interimText);
-            if (finalText) {
-                restartCount = 0; 
-                if (onFinal) onFinal(finalText);
-            }
+            if (finalText && onFinal) onFinal(finalText);
         };
 
         recognition.onend = () => {
@@ -87,8 +88,13 @@ const SpeechEngine = (function () {
                 return;
             }
 
-            // Mobile Auto-Restart Workaround (Gives OS time to clean up hardware locks)
-            if (restartCount < MAX_RESTARTS && currentCallbacks) {
+            // Live Talk Auto-Restart (continuous listening)
+            const timeSinceLastFinal = Date.now() - lastFinalTime;
+            const shouldRestart = restartCount < MAX_RESTARTS && 
+                                  currentCallbacks && 
+                                  timeSinceLastFinal < 30000; // 30 sec timeout
+
+            if (shouldRestart) {
                 restartCount++;
                 setTimeout(() => {
                     try {
@@ -98,9 +104,11 @@ const SpeechEngine = (function () {
                     } catch (e) {
                         // Fallback retry if OS was still busy
                         recognition.abort();
-                        setTimeout(() => { try { recognition.start(); } catch(err){} }, 500);
+                        setTimeout(() => { 
+                            try { recognition.start(); } catch(err){} 
+                        }, 500);
                     }
-                }, 400); // 400ms delay protects mobile memory channels
+                }, 300); // Faster restart for live talk
             } else {
                 if (onEnd) onEnd();
             }
@@ -110,6 +118,10 @@ const SpeechEngine = (function () {
             if (e.error === 'not-allowed') {
                 console.error("❌ Mic permission denied by user or unsecure origin (HTTP)");
                 isExplicitlyStopped = true;
+            }
+            if (e.error === 'no-speech' || e.error === 'aborted') {
+                // These are normal in continuous mode, ignore
+                return;
             }
             if (onError) onError(e);
         };
@@ -183,7 +195,7 @@ const SpeechEngine = (function () {
         const utterance = new SpeechSynthesisUtterance(text);
         const voice = pickBestVoice();
         if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
-        else utterance.lang = "en-US";
+        else utterance.lang = "en-IN";
         
         utterance.onstart = () => { startSimulatedWave(onAmplitude); if (onStart) onStart(); };
         utterance.onend = () => { stopSimulatedWave(); if (onEnd) onEnd(); };
