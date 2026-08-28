@@ -27,15 +27,9 @@ if (!GEMINI_API_KEY) {
 // ===============================
 // MIDDLEWARE
 // ===============================
-// CORS - Restrict to specific origins in production
-const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:5000',
-    process.env.FRONTEND_URL || ''
-].filter(Boolean);
-
+// CORS - Allow all origins (Railway proxy handles security)
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? allowedOrigins : true,
+    origin: true,
     credentials: true
 }));
 
