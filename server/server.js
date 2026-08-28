@@ -17,9 +17,37 @@ const { scanMessage } = require("./scamEngine");
 const app = express();
 
 // ===============================
+// ENVIRONMENT VALIDATION
+// ===============================
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+if (!GEMINI_API_KEY) {
+    console.warn("⚠️  WARNING: GEMINI_API_KEY not set. AI features will be limited.");
+}
+
+// ===============================
 // MIDDLEWARE
 // ===============================
-app.use(cors({ origin: true, credentials: true }));
+// CORS - Restrict to specific origins in production
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5000',
+    process.env.FRONTEND_URL || ''
+].filter(Boolean);
+
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production' ? allowedOrigins : true,
+    credentials: true
+}));
+
+// Security Headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+});
+
 app.use(express.json({ limit: "10mb" }));
 
 // AUTO-DETECT client folder
@@ -31,10 +59,15 @@ const clientCandidates = [
 const CLIENT_PATH = clientCandidates.find(p => fs.existsSync(path.join(p, "index.html")));
 console.log("📁 Frontend folder detected at:", CLIENT_PATH);
 
+if (!CLIENT_PATH) {
+    console.error("❌ CRITICAL: Client folder not found! Server cannot serve frontend.");
+    process.exit(1);
+}
+
 app.use(express.static(CLIENT_PATH));
 
 // Gemini AI setup
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 // ===============================
 // 🌐 LANGUAGE DETECTOR
@@ -225,9 +258,70 @@ db.all(
 );
 
 // ===============================
-// BLACKLIST TABLE
+// DATABASE INITIALIZATION
 // ===============================
-db.run("CREATE TABLE IF NOT EXISTS blacklist (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT NOT NULL, note TEXT)");
+// Initialize all required tables
+const initDatabase = () => {
+    try {
+        // Chats table for conversation history
+        db.run(`CREATE TABLE IF NOT EXISTS chats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT NOT NULL,
+            message TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        
+        // Memories table for long-term memory
+        db.run(`CREATE TABLE IF NOT EXISTS memories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fact TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        
+        // Blacklist table for scam patterns
+        db.run(`CREATE TABLE IF NOT EXISTS blacklist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pattern TEXT NOT NULL,
+            note TEXT,
+            added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        
+        console.log("✅ Database tables initialized");
+    } catch (err) {
+        console.error("❌ Database initialization failed:", err.message);
+    }
+};
+
+initDatabase();
+
+// ===============================
+// INPUT VALIDATION HELPERS
+// ===============================
+function validateMessage(msg) {
+    if (!msg || typeof msg !== 'string') return null;
+    const trimmed = msg.trim();
+    if (trimmed.length === 0) return null;
+    if (trimmed.length > 5000) return trimmed.slice(0, 5000);
+    return trimmed;
+}
+
+function validateBase64(data) {
+    if (!data || typeof data !== 'string') return null;
+    try {
+        const base64Pattern = /^data:.*?base64,(.+)$|^([A-Za-z0-9+/=]+)$/;
+        if (!base64Pattern.test(data)) return null;
+        const cleaned = data.includes(',') ? data.split(',')[1] : data;
+        Buffer.from(cleaned, 'base64');
+        return cleaned;
+    } catch {
+        return null;
+    }
+}
+
+function sanitizeOutput(text) {
+    if (!text) return '';
+    return String(text).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 function extractPatterns(text) {
     const patterns = new Set();
@@ -246,6 +340,18 @@ app.get("/", (req, res) => {
 });
 
 // ===============================
+// HEALTH CHECK ENDPOINT (Railway monitoring)
+// ===============================
+app.get("/health", (req, res) => {
+    res.json({ 
+        status: "ok", 
+        timestamp: new Date().toISOString(),
+        port: process.env.PORT || 3000,
+        ai_ready: !!ai
+    });
+});
+
+// ===============================
 // HISTORY ROUTE
 // ===============================
 app.get("/history", (req, res) => {
@@ -260,22 +366,32 @@ app.get("/history", (req, res) => {
 // ===============================
 app.post("/chat", async (req, res) => {
     try {
-        const message = req.body.message;
+        // Validate input
+        const message = validateMessage(req.body.message);
+        if (!message) {
+            return res.status(400).json({ error: "Invalid message" });
+        }
+        
         const lang = String(req.body.lang || "").toLowerCase();
         const tone = String(req.body.tone || "").toLowerCase();
         console.log("📩 User:", message);
 
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", message]);
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", message], (err) => {
+            if (err) console.error("❌ Failed to save user message:", err.message);
+        });
 
         // ⚡ SMART CACHE — greetings ke liye 0 API call (trilingual)
         const cachedReply = getGreetingResponse(message);
         if (cachedReply) {
             console.log("⚡ CACHED greeting response (quota saved!)");
-            db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", cachedReply]);
+            db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", cachedReply], (err) => {
+                if (err) console.error("❌ Failed to save cached reply:", err.message);
+            });
+            // Only keep last 50 messages in memory
             conversationHistory.push({ role: "user", parts: [{ text: message }] });
             conversationHistory.push({ role: "model", parts: [{ text: cachedReply }] });
-            if (conversationHistory.length > 30) conversationHistory = conversationHistory.slice(-30);
-            return res.json({ reply: cachedReply, cached: true });
+            if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
+            return res.json({ reply: sanitizeOutput(cachedReply), cached: true });
         }
 
         // Client ne explicit language bheji toh wo priority
@@ -296,7 +412,7 @@ app.post("/chat", async (req, res) => {
         }
 
         conversationHistory.push({ role: "user", parts: [{ text: message }] });
-        if (conversationHistory.length > 30) conversationHistory = conversationHistory.slice(-30);
+        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
 
         const memoryFacts = await new Promise((resolve) => {
             db.all("SELECT fact FROM memories ORDER BY id ASC", [], (err, rows) => {
@@ -334,8 +450,10 @@ ${memoryBlock}`;
             if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
                 console.warn("⚠️ All models quota exhausted — sending friendly message");
                 const friendlyMsg = "VED AI abhi thodi der ke liye vyast hai. Kripya 1-2 minute baad dobara prayas karein. Dhanyavaad! 🙏";
-                db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", friendlyMsg]);
-                return res.json({ reply: friendlyMsg, quotaExhausted: true });
+                db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", friendlyMsg], (err) => {
+                    if (err) console.error("❌ Failed to save quota message:", err.message);
+                });
+                return res.json({ reply: sanitizeOutput(friendlyMsg), quotaExhausted: true });
             }
             throw fallbackErr;
         }
@@ -343,10 +461,13 @@ ${memoryBlock}`;
         const reply = result.candidates[0].content.parts[0].text;
 
         console.log("🤖 VED:", reply);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
+            if (err) console.error("❌ Failed to save AI reply:", err.message);
+        });
         conversationHistory.push({ role: "model", parts: [{ text: reply }] });
+        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
 
-        res.json({ reply: reply });
+        res.json({ reply: sanitizeOutput(reply) });
 
     } catch (error) {
         console.error("❌ Server Error:", error);
@@ -360,13 +481,18 @@ ${memoryBlock}`;
 app.post("/vision", async (req, res) => {
     try {
         const { image, message } = req.body;
-        if (!image) return res.status(400).json({ reply: "No photo received." });
-
-        const base64Data = image.includes(",") ? image.split(",")[1] : image;
-        const question = (message && message.trim()) ? message.trim() : "What is in this photo? Describe it naturally.";
+        
+        // Validate base64 image
+        const base64Data = validateBase64(image);
+        if (!base64Data) {
+            return res.status(400).json({ reply: "Invalid image format." });
+        }
+        const question = validateMessage(message) || "What is in this photo? Describe it naturally.";
 
         console.log("📷 Photo question:", question);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Photo] " + question]);
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Photo] " + question], (err) => {
+            if (err) console.error("❌ Failed to save vision request:", err.message);
+        });
 
         const visionPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Answer the user's question about the attached photo naturally.\nQuestion: ${question}`;
 
@@ -376,8 +502,10 @@ app.post("/vision", async (req, res) => {
 
         const reply = result.candidates[0].content.parts[0].text;
         console.log("🤖 VED (vision):", reply);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
-        res.json({ reply });
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
+            if (err) console.error("❌ Failed to save vision reply:", err.message);
+        });
+        res.json({ reply: sanitizeOutput(reply) });
 
     } catch (error) {
         console.error("❌ Vision Error:", error);
@@ -391,18 +519,23 @@ app.post("/vision", async (req, res) => {
 app.post("/document", async (req, res) => {
     try {
         const { document, message } = req.body;
-        if (!document) return res.status(400).json({ reply: "No document received." });
-
-        const base64Data = document.includes(",") ? document.split(",")[1] : document;
+        
+        // Validate base64 document
+        const base64Data = validateBase64(document);
+        if (!base64Data) {
+            return res.status(400).json({ reply: "Invalid document format." });
+        }
         const buffer = Buffer.from(base64Data, "base64");
 
         let text = buffer.toString("utf-8").trim();
         if (!text) return res.json({ reply: "I couldn't find any readable text in that PDF." });
         if (text.length > 12000) text = text.slice(0, 12000) + "\n\n[Document truncated]";
 
-        const question = (message && message.trim()) ? message.trim() : "Summarize this document.";
+        const question = validateMessage(message) || "Summarize this document.";
         console.log("📄 Document question:", question);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Document] " + question]);
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Document] " + question], (err) => {
+            if (err) console.error("❌ Failed to save document request:", err.message);
+        });
 
         const docPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Use the document content below to answer.\nDocument content:\n${text}\nQuestion: ${question}`;
 
@@ -412,8 +545,10 @@ app.post("/document", async (req, res) => {
 
         const reply = result.candidates[0].content.parts[0].text;
         console.log("🤖 VED (document):", reply);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
-        res.json({ reply });
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
+            if (err) console.error("❌ Failed to save document reply:", err.message);
+        });
+        res.json({ reply: sanitizeOutput(reply) });
 
     } catch (error) {
         console.error("❌ Document Error:", error);
@@ -426,26 +561,37 @@ app.post("/document", async (req, res) => {
 // ===============================
 app.post("/blacklist", (req, res) => {
     try {
-        const message = req.body.message || "";
+        const message = validateMessage(req.body.message);
+        if (!message) {
+            return res.status(400).json({ saved: 0, error: "Invalid message" });
+        }
+        
         const patterns = extractPatterns(message);
         const toSave = patterns.length ? patterns : [message.trim().slice(0, 120)];
 
+        let saved = 0;
         toSave.forEach(p => {
-            db.run("INSERT INTO blacklist(pattern, note) VALUES(?, ?)", [p, message.slice(0, 120)]);
+            db.run("INSERT INTO blacklist(pattern, note) VALUES(?, ?)", [p, message.slice(0, 120)], (err) => {
+                if (err) console.error("❌ Failed to save blacklist pattern:", err.message);
+                else saved++;
+            });
         });
 
         console.log("🚫 Blacklisted patterns:", toSave);
         res.json({ saved: toSave.length, patterns: toSave });
     } catch (error) {
         console.error("❌ Blacklist Error:", error);
-        res.status(500).json({ saved: 0 });
+        res.status(500).json({ saved: 0, error: "Failed to save blacklist" });
     }
 });
 
 app.get("/blacklist", (req, res) => {
     db.all("SELECT id, pattern FROM blacklist ORDER BY id DESC", [], (err, rows) => {
-        if (err) return res.json({ blacklist: [] });
-        res.json({ blacklist: rows });
+        if (err) {
+            console.error("❌ Failed to fetch blacklist:", err.message);
+            return res.json({ blacklist: [] });
+        }
+        res.json({ blacklist: rows || [] });
     });
 });
 
@@ -454,14 +600,23 @@ app.get("/blacklist", (req, res) => {
 // ===============================
 app.post("/check-scam", async (req, res) => {
     try {
-        const suspiciousMessage = req.body.message;
-        if (!suspiciousMessage) return res.status(400).json({ reply: "Koi message nahi mila." });
+        const suspiciousMessage = validateMessage(req.body.message);
+        if (!suspiciousMessage) {
+            return res.status(400).json({ reply: "Invalid message format." });
+        }
 
         console.log("🛡️ Checking:", suspiciousMessage);
         const radar = scanMessage(suspiciousMessage);
 
         const blacklistRows = await new Promise((resolve) => {
-            db.all("SELECT pattern FROM blacklist", [], (err, rows) => resolve(err ? [] : (rows || [])));
+            db.all("SELECT pattern FROM blacklist", [], (err, rows) => {
+                if (err) {
+                    console.error("❌ Failed to fetch blacklist:", err.message);
+                    resolve([]);
+                } else {
+                    resolve(rows || []);
+                }
+            });
         });
 
         const normalized = suspiciousMessage.toLowerCase().replace(/[\s\-]/g, "");
@@ -521,37 +676,47 @@ Message: "${suspiciousMessage}"`;
 // ===============================
 app.post("/tts", async (req, res) => {
     try {
-        const { text } = req.body;
-        if (!text) return res.status(400).json({ error: "No text provided" });
+        const text = validateMessage(req.body.text);
+        if (!text) return res.status(400).json({ error: "Invalid text provided" });
+
+        const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+        if (!ELEVENLABS_API_KEY) {
+            console.warn("⚠️ ELEVENLABS_API_KEY not set. TTS disabled.");
+            return res.status(503).json({ error: "TTS service unavailable" });
+        }
 
         const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
         const models = ["eleven_v3", "eleven_multilingual_v2"];
 
         let audioBuffer = null;
         for (const model of models) {
-            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-                method: "POST",
-                headers: {
-                    "xi-api-key": process.env.ELEVENLABS_API_KEY,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    text: text,
-                    model_id: model,
-                    voice_settings: {
-                        stability: 0.35,
-                        similarity_boost: 0.8,
-                        style: 0.25,
-                        use_speaker_boost: true
-                    }
-                })
-            });
-            if (response.ok) {
-                audioBuffer = Buffer.from(await response.arrayBuffer());
-                console.log("🔊 TTS via:", model);
-                break;
+            try {
+                const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+                    method: "POST",
+                    headers: {
+                        "xi-api-key": ELEVENLABS_API_KEY,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        model_id: model,
+                        voice_settings: {
+                            stability: 0.35,
+                            similarity_boost: 0.8,
+                            style: 0.25,
+                            use_speaker_boost: true
+                        }
+                    })
+                });
+                if (response.ok) {
+                    audioBuffer = Buffer.from(await response.arrayBuffer());
+                    console.log("🔊 TTS via:", model);
+                    break;
+                }
+                console.warn("⚠️ Model failed:", model, response.status);
+            } catch (err) {
+                console.warn("⚠️ TTS model error:", model, err.message);
             }
-            console.warn("⚠️ Model failed:", model, response.status);
         }
 
         if (!audioBuffer) return res.status(500).json({ error: "All TTS models failed" });
@@ -583,6 +748,30 @@ setupAuth(app);
 app.use('/api/missions', require('./routes/missions')());
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+
+// Start server with error handling
+const server = app.listen(PORT, () => {
     console.log(`🚀 VED AI Server Running on Port ${PORT}`);
+    console.log(`🌐 URL: http://localhost:${PORT}`);
+});
+
+// Handle server errors
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`❌ ERROR: Port ${PORT} is already in use`);
+    } else {
+        console.error(`❌ Server Error:`, err);
+    }
+    process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    console.error(`❌ UNCAUGHT EXCEPTION:`, err);
+    process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error(`❌ UNHANDLED REJECTION at ${promise}:`, reason);
 });
