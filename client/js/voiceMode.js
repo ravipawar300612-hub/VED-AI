@@ -1,189 +1,97 @@
 // ==========================================
-// VED AI — VOICE MODE CONTROLLER (FIXED)
-// Drives the fullscreen voice overlay:
-// idle → listening → thinking → speaking → loop
+// VOICE MODE APPLICATION INTERFACE CONTROLLER
+// Binds layout mutations directly to safe state engines
 // ==========================================
 
-const VoiceMode = (function () {
+import { ChatbotState } from './stateEngine.js';
+import { SpeechEngine } from './speechEngine.js';
 
-    let overlay, statusEl, transcriptEl, waveformEl, waveBars, exitBtn;
-    let isOpen = false;
-    let isExiting = false;
+document.addEventListener("DOMContentLoaded", () => {
+    // Locate critical DOM targets
+    const micButton = document.getElementById("mic-toggle-btn");
+    const statusText = document.getElementById("chatbot-status-prompt");
+    const waveVisualizer = document.getElementById("wave-canvas-container");
+    const textOutputContainer = document.getElementById("speech-transcript-view");
 
-    function init() {
-        overlay = document.getElementById("voiceOverlay");
-        statusEl = document.getElementById("voiceStatus");
-        transcriptEl = document.getElementById("voiceTranscript");
-        waveformEl = document.getElementById("voiceWaveform");
-        exitBtn = document.getElementById("voiceExitBtn");
-
-        if (!overlay || !exitBtn) return;
-
-        waveBars = Array.from(waveformEl.querySelectorAll("span"));
-
-        exitBtn.addEventListener("click", function(e) {
-            e.stopPropagation();
-            close();
-        });
+    if (!micButton) {
+        console.warn("[VoiceMode] Mic button element missing from the current view configuration.");
+        return;
     }
 
-    function setState(state) {
-        if (!overlay) return;
-        overlay.dataset.state = state;
+    // Step 1: Initialize speech engine configurations
+    SpeechEngine.init({
+        onInterimText: (text) => {
+            if (textOutputContainer) textOutputContainer.innerText = text;
+        },
+        onListeningStart: () => {
+            if (statusText) statusText.innerText = "Listening to you...";
+            micButton.classList.add("recording-active");
+            if (waveVisualizer) waveVisualizer.style.opacity = "0.5";
+        },
+        onThinkingStart: () => {
+            if (statusText) statusText.innerText = "Processing answer...";
+            if (waveVisualizer) waveVisualizer.style.opacity = "0.2";
+        },
+        onSpeakingStart: () => {
+            if (statusText) statusText.innerText = "VED AI is speaking...";
+            if (waveVisualizer) waveVisualizer.style.opacity = "1";
+        },
+        onIdle: () => {
+            if (statusText) statusText.innerText = "Tap mic to start";
+            micButton.classList.remove("recording-active");
+            if (waveVisualizer) waveVisualizer.style.opacity = "0";
+        },
+        onAmplitude: (value) => {
+            // Animate interface container scaling dynamically using frequency updates
+            if (waveVisualizer) {
+                waveVisualizer.style.transform = `scale(${1 + value * 0.15})`;
+            }
+        }
+    });
 
-        const labels = {
-            idle: "Idle",
-            listening: "Listening...",
-            thinking: "Thinking...",
-            speaking: "Speaking..."
-        };
+    // Step 2: Bind explicit user click triggers (Fulfills Mobile Gesture Sandbox Rules)
+    micButton.addEventListener("click", () => {
+        // Unlock browser audio context context constraints safely via gesture invocation
+        if (window.AudioContext || window.webkitAudioContext) {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            if (context.state === 'suspended') {
+                context.resume();
+            }
+        }
 
-        if (statusEl) statusEl.textContent = labels[state] || "";
-
-        if (!waveformEl) return;
-        if (state === "listening" || state === "speaking") {
-            waveformEl.classList.add("visible");
+        if (ChatbotState.current === 'IDLE') {
+            ChatbotState.transitionTo('LISTENING');
         } else {
-            waveformEl.classList.remove("visible");
+            ChatbotState.transitionTo('IDLE');
+        }
+    });
+
+    // Step 3: Listen for incoming text payload triggers
+    ChatbotState.subscribe((state, payload) => {
+        if (state === 'THINKING') {
+            if (textOutputContainer) textOutputContainer.innerText = payload; // Sync transcription view
+            sendPayloadToBotBackend(payload);
+        }
+    });
+
+    // Step 4: Dispatch payload payload data to back-end routes safely
+    async function sendPayloadToBotBackend(userText) {
+        try {
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userText })
+            });
+
+            if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+            
+            const data = await response.json();
+            
+            // Pass bot response string into the audio generator pipeline
+            ChatbotState.transitionTo('SPEAKING', data.reply || data.message || "");
+        } catch (error) {
+            console.error("Backend dispatch error connection failed:", error);
+            ChatbotState.transitionTo('IDLE');
         }
     }
-
-    function setWaveAmplitude(amplitude) {
-        if (!waveBars || waveBars.length === 0) return;
-        waveBars.forEach((bar, i) => {
-            const variance = 0.5 + Math.sin(i * 1.3) * 0.5;
-            const height = Math.max(6, amplitude * 34 * variance);
-            bar.style.height = height + "px";
-        });
-    }
-
-    function resetWave() {
-        if (!waveBars) return;
-        waveBars.forEach(bar => bar.style.height = "6px");
-    }
-
-    // ---------------------------------
-    // OPEN / CLOSE (FIXED)
-    // ---------------------------------
-
-    function open() {
-        if (!overlay) return;
-
-        if (!SpeechEngine || !SpeechEngine.isSupported) {
-            alert("Voice mode isn't supported in this browser. Try Chrome.");
-            return;
-        }
-
-        // FORCE RESET — agar pehle se stuck hai toh clear karo
-        if (isOpen) close();
-
-        isOpen = true;
-        isExiting = false;
-
-        overlay.style.display = "";
-        overlay.classList.add("active");
-        setState("idle");
-        if (transcriptEl) transcriptEl.textContent = "";
-
-        setTimeout(() => {
-            if (isOpen && !isExiting) listenStep();
-        }, 500);
-    }
-
-    function close() {
-        if (!overlay) return;
-
-        isExiting = true;
-        isOpen = false;
-
-        // FORCE STOP — SpeechEngine ko properly kill karo
-        if (SpeechEngine) {
-            try { SpeechEngine.stopListening(); } catch (e) {}
-            try { SpeechEngine.cancelSpeaking(); } catch (e) {}
-        }
-
-        overlay.classList.remove("active");
-        resetWave();
-
-        // Hide karo taaki next time clean open ho
-        setTimeout(() => {
-            if (!isOpen) overlay.style.display = "none";
-        }, 300);
-    }
-
-    // ---------------------------------
-    // CONVERSATION LOOP
-    // ---------------------------------
-
-    function listenStep() {
-        if (!isOpen || isExiting) return;
-
-        setState("listening");
-        if (transcriptEl) transcriptEl.textContent = "";
-
-        if (!SpeechEngine || !SpeechEngine.startListening) {
-            close();
-            return;
-        }
-
-        SpeechEngine.startListening({
-            onInterim: (text) => {
-                if (transcriptEl) transcriptEl.textContent = text;
-            },
-            onAmplitude: (amp) => {
-                if (overlay && overlay.dataset.state === "listening") setWaveAmplitude(amp);
-            },
-            onFinal: async (text) => {
-                if (isExiting || !isOpen) return;
-                if (transcriptEl) transcriptEl.textContent = text;
-                setState("thinking");
-                resetWave();
-
-                try {
-                    const reply = await window.VedChat.sendToServer(text, { showThinkingBubble: false });
-                    if (!isOpen || isExiting) return;
-                    speakStep(reply);
-                } catch (err) {
-                    console.warn("Voice send error:", err);
-                    if (isOpen) setTimeout(listenStep, 800);
-                }
-            },
-            onEnd: () => {
-                if (isOpen && !isExiting && overlay && overlay.dataset.state === "listening") {
-                    setTimeout(listenStep, 400);
-                }
-            },
-            onError: (err) => {
-                console.warn("Voice recognition error:", err);
-                if (isOpen && !isExiting) setTimeout(listenStep, 800);
-            }
-        });
-    }
-
-    function speakStep(reply) {
-        if (!isOpen || isExiting) return;
-
-        setState("speaking");
-
-        if (!SpeechEngine || !SpeechEngine.speak) {
-            if (isOpen) listenStep();
-            return;
-        }
-
-        SpeechEngine.speak(reply, {
-            onAmplitude: (amp) => {
-                if (overlay && overlay.dataset.state === "speaking") setWaveAmplitude(amp);
-            },
-            onEnd: () => {
-                resetWave();
-                if (isOpen && !isExiting) {
-                    setTimeout(listenStep, 500);
-                }
-            }
-        });
-    }
-
-    return { init, open, close };
-})();
-
-document.addEventListener("DOMContentLoaded", VoiceMode.init);
+});

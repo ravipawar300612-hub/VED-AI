@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "VED AI - Intelligent AI Companion",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
