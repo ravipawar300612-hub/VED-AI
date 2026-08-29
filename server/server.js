@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI SERVER v8.6 (TRILINGUAL + QUOTA SAVER)
+// VED AI SERVER v8.7 (TRILINGUAL + QUOTA SAVER + LIVE INTERNET)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
@@ -209,17 +209,40 @@ function getGreetingResponse(message) {
 }
 
 // ===============================
-// 🔄 MODEL FALLBACK (Quota Saver #2)
+// 🔄 MODEL FALLBACK + GOOGLE SEARCH (Quota Saver #2 + Live Internet)
 // ===============================
 const MODEL_CHAIN = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
 
-async function generateWithFallback(contents) {
+async function generateWithFallback(contents, useSearch = false) {
     let lastError = null;
+    
+    // Search grounding sirf primary model pe try karo
+    if (useSearch) {
+        try {
+            const result = await ai.models.generateContent({
+                model: MODEL_CHAIN[0],
+                contents,
+                tools: [{ google_search: {} }]
+            });
+            console.log("✅ Used model with Google Search:", MODEL_CHAIN[0]);
+            return { result, usedSearch: true };
+        } catch (err) {
+            const errMsg = String(err.message || err).toLowerCase();
+            if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
+                console.warn("⚠️ Search grounding quota full, falling back to normal...");
+            } else {
+                console.warn("⚠️ Search grounding error:", err.message);
+            }
+            // Fall through to normal generation
+        }
+    }
+    
+    // Normal generation with model chain
     for (const model of MODEL_CHAIN) {
         try {
             const result = await ai.models.generateContent({ model, contents });
             console.log("✅ Used model:", model);
-            return result;
+            return { result, usedSearch: false };
         } catch (err) {
             const errMsg = String(err.message || err).toLowerCase();
             if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
@@ -356,7 +379,7 @@ app.get("/history", (req, res) => {
 });
 
 // ===============================
-// CHAT ROUTE (TRILINGUAL + WARM PROFESSIONAL + QUOTA SAVER)
+// CHAT ROUTE (TRILINGUAL + WARM PROFESSIONAL + QUOTA SAVER + LIVE INTERNET)
 // ===============================
 app.post("/chat", async (req, res) => {
     try {
@@ -446,15 +469,20 @@ IMPORTANT RULES:
 - Make EVERY user feel comfortable, respected and welcome
 - Never use markdown (*, #, _, backticks)
 - Write exactly how you'd speak naturally
+- If you're unsure about current facts, use Google Search to verify
 ${langLine}${toneLine}
 
 ${memoryBlock}`;
 
         const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory];
 
-        let result;
+        let response;
+        let usedSearch = false;
         try {
-            result = await generateWithFallback(contents);
+            // Try with Google Search first for current events/facts
+            const genResult = await generateWithFallback(contents, true);
+            response = genResult.result;
+            usedSearch = genResult.usedSearch;
         } catch (fallbackErr) {
             const errMsg = String(fallbackErr.message || fallbackErr).toLowerCase();
             if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
@@ -468,7 +496,21 @@ ${memoryBlock}`;
             throw fallbackErr;
         }
 
-        const reply = result.candidates[0].content.parts[0].text;
+        let reply = response.candidates[0].content.parts[0].text;
+        
+        // Extract source links if search was used
+        if (usedSearch && response.candidates[0].groundingMetadata) {
+            const grounding = response.candidates[0].groundingMetadata;
+            if (grounding.groundingChunks) {
+                const sources = grounding.groundingChunks
+                    .filter(c => c.web)
+                    .slice(0, 2)
+                    .map(c => `[${c.web.title || 'Source'}](${c.web.uri})`);
+                if (sources.length) {
+                    reply += "\n\n📎 Sources: " + sources.join(" • ");
+                }
+            }
+        }
 
         console.log("🤖 VED:", reply);
         db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
@@ -477,7 +519,7 @@ ${memoryBlock}`;
         conversationHistory.push({ role: "model", parts: [{ text: reply }] });
         if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
 
-        res.json({ reply: sanitizeOutput(reply) });
+        res.json({ reply: sanitizeOutput(reply), usedSearch: usedSearch });
 
     } catch (error) {
         console.error("❌ Server Error:", error);
@@ -506,11 +548,11 @@ app.post("/vision", async (req, res) => {
 
         const visionPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Answer the user's question about the attached photo naturally.\nQuestion: ${question}`;
 
-        const result = await generateWithFallback([
+        const genResult = await generateWithFallback([
             { role: "user", parts: [{ text: visionPrompt }, { inlineData: { mimeType: "image/jpeg", data: base64Data } }] }
-        ]);
+        ], false);
 
-        const reply = result.candidates[0].content.parts[0].text;
+        const reply = genResult.result.candidates[0].content.parts[0].text;
         console.log("🤖 VED (vision):", reply);
         db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
             if (err) console.error("❌ Failed to save vision reply:", err.message);
@@ -549,11 +591,11 @@ app.post("/document", async (req, res) => {
 
         const docPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Use the document content below to answer.\nDocument content:\n${text}\nQuestion: ${question}`;
 
-        const result = await generateWithFallback([
+        const genResult = await generateWithFallback([
             { role: "user", parts: [{ text: docPrompt }] }
-        ]);
+        ], false);
 
-        const reply = result.candidates[0].content.parts[0].text;
+        const reply = genResult.result.candidates[0].content.parts[0].text;
         console.log("🤖 VED (document):", reply);
         db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
             if (err) console.error("❌ Failed to save document reply:", err.message);
@@ -663,10 +705,10 @@ ACTION: [One clear action, e.g. "Link par click mat karo" ya "Ye safe hai, chint
 
 Message: "${suspiciousMessage}"`;
 
-            const result = await generateWithFallback([
+            const genResult = await generateWithFallback([
                 { role: "user", parts: [{ text: scamPrompt }] }
-            ]);
-            reply = result.candidates[0].content.parts[0].text;
+            ], false);
+            reply = genResult.result.candidates[0].content.parts[0].text;
         } catch (e) {
             reply = "VERDICT: " + radar.radarVerdict +
                     "\nHINDI: Internet nahi hai, isliye VED Radar ne akela check kiya. Risk score " + radar.riskScore + " mila hai. Savdhani rakhein." +
