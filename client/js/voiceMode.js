@@ -1,7 +1,6 @@
 // ==========================================
-// VED AI — VOICE MODE CONTROLLER (BRIDGE FIXED)
-// Drives the fullscreen voice overlay:
-// idle → listening → thinking → speaking → loop
+// VED AI — VOICE MODE CONTROLLER (FINAL FIX)
+// Auto-detect language + Toast feedback
 // ==========================================
 
 const VoiceMode = (function () {
@@ -9,6 +8,14 @@ const VoiceMode = (function () {
     let overlay, statusEl, transcriptEl, waveformEl, waveBars, exitBtn;
     let isOpen = false;
     let isExiting = false;
+
+    function toast(msg, duration = 3000) {
+        const t = document.createElement("div");
+        t.textContent = msg;
+        t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);";
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), duration);
+    }
 
     function init() {
         overlay = document.getElementById("voiceOverlay");
@@ -18,7 +25,6 @@ const VoiceMode = (function () {
         exitBtn = document.getElementById("voiceExitBtn");
 
         if (!overlay || !exitBtn) return;
-
         waveBars = Array.from(waveformEl.querySelectorAll("span"));
 
         exitBtn.addEventListener("click", function(e) {
@@ -31,21 +37,12 @@ const VoiceMode = (function () {
         if (!overlay) return;
         overlay.dataset.state = state;
 
-        const labels = {
-            idle: "Idle",
-            listening: "Listening...",
-            thinking: "Thinking...",
-            speaking: "Speaking..."
-        };
-
+        const labels = { idle: "Idle", listening: "Listening...", thinking: "Thinking...", speaking: "Speaking..." };
         if (statusEl) statusEl.textContent = labels[state] || "";
 
         if (!waveformEl) return;
-        if (state === "listening" || state === "speaking") {
-            waveformEl.classList.add("visible");
-        } else {
-            waveformEl.classList.remove("visible");
-        }
+        if (state === "listening" || state === "speaking") waveformEl.classList.add("visible");
+        else waveformEl.classList.remove("visible");
     }
 
     function setWaveAmplitude(amplitude) {
@@ -62,26 +59,11 @@ const VoiceMode = (function () {
         waveBars.forEach(bar => bar.style.height = "6px");
     }
 
-    // ---------------------------------
-    // ADD MESSAGE TO CHAT (so user sees it)
-    // ---------------------------------
-    function addToChat(role, text) {
-        const chatBox = document.getElementById("chatMessages");
-        if (!chatBox) return;
+    // DIRECT API CALL — bypass VedChat completely
+    async function directAPICall(text) {
+        console.log("🎤 Voice → Server:", text);
         
-        const msgDiv = document.createElement("div");
-        msgDiv.className = role === "user" ? "user-message" : "bot-message";
-        msgDiv.innerHTML = text.replace(/\n/g, "<br>");
-        chatBox.appendChild(msgDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    // ---------------------------------
-    // DIRECT API CALL (bridge fix)
-    // ---------------------------------
-    async function sendToServer(text) {
-        console.log("🎤 Voice sending:", text);
-        
+        // NO lang parameter — let server auto-detect!
         const response = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -89,40 +71,47 @@ const VoiceMode = (function () {
         });
 
         if (!response.ok) {
-            throw new Error("Server error: " + response.status);
+            const errText = await response.text().catch(() => "");
+            throw new Error("Server " + response.status + ": " + errText.slice(0, 100));
         }
 
         const data = await response.json();
-        console.log("🤖 Voice reply:", data.reply);
+        console.log("🤖 Reply:", data.reply);
         
-        // Add to chat so user sees it
-        addToChat("user", text);
-        addToChat("bot", data.reply);
+        // Add to main chat (if open)
+        const chatBox = document.getElementById("chatMessages");
+        if (chatBox) {
+            const userMsg = document.createElement("div");
+            userMsg.className = "user-message";
+            userMsg.innerHTML = text.replace(/\n/g, "<br>");
+            chatBox.appendChild(userMsg);
+            
+            const botMsg = document.createElement("div");
+            botMsg.className = "bot-message";
+            botMsg.innerHTML = data.reply.replace(/\n/g, "<br>");
+            chatBox.appendChild(botMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
         
-        return data.reply;
+        return data.reply || "Sorry, I couldn't generate a response.";
     }
 
-    // ---------------------------------
-    // OPEN / CLOSE
-    // ---------------------------------
     function open() {
         if (!overlay) return;
-
         if (!SpeechEngine || !SpeechEngine.isSupported) {
-            alert("Voice mode isn't supported in this browser. Try Chrome.");
+            toast("❌ Browser voice support nahi hai. Chrome use karein.");
             return;
         }
-
         if (isOpen) close();
 
         isOpen = true;
         isExiting = false;
-
         overlay.style.display = "";
         overlay.classList.add("active");
         setState("idle");
         if (transcriptEl) transcriptEl.textContent = "";
 
+        toast("🎙️ Boliye, main sun raha hu...", 2000);
         setTimeout(() => {
             if (isOpen && !isExiting) listenStep();
         }, 500);
@@ -130,7 +119,6 @@ const VoiceMode = (function () {
 
     function close() {
         if (!overlay) return;
-
         isExiting = true;
         isOpen = false;
 
@@ -138,28 +126,17 @@ const VoiceMode = (function () {
             try { SpeechEngine.stopListening(); } catch (e) {}
             try { SpeechEngine.cancelSpeaking(); } catch (e) {}
         }
-
         overlay.classList.remove("active");
         resetWave();
-
         setTimeout(() => {
             if (!isOpen) overlay.style.display = "none";
         }, 300);
     }
 
-    // ---------------------------------
-    // CONVERSATION LOOP
-    // ---------------------------------
     function listenStep() {
         if (!isOpen || isExiting) return;
-
         setState("listening");
         if (transcriptEl) transcriptEl.textContent = "";
-
-        if (!SpeechEngine || !SpeechEngine.startListening) {
-            close();
-            return;
-        }
 
         SpeechEngine.startListening({
             onInterim: (text) => {
@@ -175,22 +152,14 @@ const VoiceMode = (function () {
                 resetWave();
 
                 try {
-                    // Use VedChat if available, otherwise direct API call
-                    let reply;
-                    if (window.VedChat && window.VedChat.sendToServer) {
-                        reply = await window.VedChat.sendToServer(text, { showThinkingBubble: false });
-                    } else {
-                        reply = await sendToServer(text);
-                    }
-                    
+                    const reply = await directAPICall(text);
                     if (!isOpen || isExiting) return;
                     speakStep(reply);
                 } catch (err) {
-                    console.error("❌ Voice send error:", err);
-                    if (isOpen) {
-                        if (transcriptEl) transcriptEl.textContent = "Sorry, I couldn't process that. Try again?";
-                        setTimeout(listenStep, 1500);
-                    }
+                    console.error("❌ Voice API Error:", err);
+                    toast("❌ Error: " + err.message, 4000);
+                    if (transcriptEl) transcriptEl.textContent = "Error: " + err.message;
+                    if (isOpen) setTimeout(listenStep, 2500);
                 }
             },
             onEnd: () => {
@@ -199,7 +168,7 @@ const VoiceMode = (function () {
                 }
             },
             onError: (err) => {
-                console.warn("Voice recognition error:", err);
+                console.warn("Recognition error:", err);
                 if (isOpen && !isExiting) setTimeout(listenStep, 800);
             }
         });
@@ -207,11 +176,10 @@ const VoiceMode = (function () {
 
     function speakStep(reply) {
         if (!isOpen || isExiting) return;
-
         setState("speaking");
 
         if (!SpeechEngine || !SpeechEngine.speak) {
-            if (isOpen) listenStep();
+            if (isOpen) setTimeout(listenStep, 1000);
             return;
         }
 
@@ -221,9 +189,7 @@ const VoiceMode = (function () {
             },
             onEnd: () => {
                 resetWave();
-                if (isOpen && !isExiting) {
-                    setTimeout(listenStep, 500);
-                }
+                if (isOpen && !isExiting) setTimeout(listenStep, 500);
             }
         });
     }

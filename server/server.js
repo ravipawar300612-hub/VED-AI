@@ -389,10 +389,26 @@ app.post("/chat", async (req, res) => {
         }
 
         // Client ne explicit language bheji toh wo priority
-        const langLine = lang === "hindi" ? "\nLANGUAGE RULE: Reply ONLY in simple Hindi (Devanagari script)."
-            : lang === "marathi" ? "\nLANGUAGE RULE: Reply ONLY in simple Marathi (Devanagari script)."
-            : lang === "english" ? "\nLANGUAGE RULE: Reply ONLY in simple English."
-            : "\nLANGUAGE RULE (AUTO-DETECT): Detect the language AND script of the user's message and reply in the SAME language and SAME script. English message → English reply. Hindi in Devanagari → Hindi in Devanagari. Hindi/Hinglish in Latin letters → Hinglish in Latin letters. Marathi → Marathi. Mixed message → reply in the dominant language.";
+                   // 🌐 LANGUAGE AUTO-DETECTION (Voice + Text dono ke liye)
+        function detectMsgLang(msg) {
+            const t = String(msg || "");
+            if (/[\u0900-\u097F]/.test(t)) {
+                if (/(आहे|आहात|नाही|काय|कसे|झाले|मला|तुम्ही|होय|करू|हवी|पाहिजे)/.test(t)) return "marathi";
+                return "hindi";
+            }
+            const lower = t.toLowerCase();
+            if (/\b(ahe|aahet|nahi|kay|kasa|zala|zali|mala|tumhi|hoy|karu|havay|pahije)\b/.test(lower)) return "marathi";
+            if (/\b(kya|hai|ho|kaise|nahi|kab|kahan|kaun|kyun|accha|theek|haan|matlab|yaar|bhai|didi|namaste)\b/.test(lower)) return "hindi";
+            return "english";
+        }
+        
+        const effectiveLang = (lang && lang !== "english") ? lang : detectMsgLang(message);
+        
+        const langLine = effectiveLang === "hindi" 
+            ? "\nSTRICT LANGUAGE RULE: Reply ONLY in simple Hindi. If user wrote Hindi in Devanagari, reply in Devanagari. If user wrote Hinglish (Roman letters), reply in Hinglish. NEVER reply in English."
+            : effectiveLang === "marathi" 
+            ? "\nSTRICT LANGUAGE RULE: Reply ONLY in simple Marathi (Devanagari script). NEVER reply in English or Hindi."
+            : "\nLANGUAGE RULE: Reply in simple English.";
 
         const toneLine = tone === "bodyguard" ? "\nTONE: Serious protective bodyguard mode — short, firm, safety-first."
             : tone === "ustaad" ? "\nTONE: Respectful teacher mode — clear, encouraging."
