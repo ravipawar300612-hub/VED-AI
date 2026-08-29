@@ -523,7 +523,7 @@
     });
 })();
 </script>
-<!-- ═══ VED QUICK ACTIONS — PREMIUM (SELF-INSTALLING) ═══ -->
+<!-- ═══ VED QUICK ACTIONS — PREMIUM (SMART HIDE) ═══ -->
 <style>
   .ved-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:680px;margin:0 auto 16px;padding:0 16px;opacity:0;transform:translateY(10px);animation:vedIn .7s ease .25s forwards;transition:opacity .4s ease,transform .4s ease}
   @keyframes vedIn{to{opacity:1;transform:none}}
@@ -565,10 +565,20 @@
 
     pill.parentNode.insertBefore(wrap, pill);
 
-    var box = document.getElementById('chatMessages');
-    if (box && box.children.length > 0) wrap.classList.add('hide');
+    // 🧠 SMART HIDE: chat box ko watch karo
+    function syncChips() {
+      var box = document.getElementById('chatMessages');
+      if (!box) return;
+      if (box.children.length > 0) wrap.classList.add('hide');
+      else wrap.classList.remove('hide');
+    }
 
-    function hide() { wrap.classList.add('hide'); }
+    var box = document.getElementById('chatMessages');
+    if (box && window.MutationObserver) {
+      var mo = new MutationObserver(syncChips);
+      mo.observe(box, { childList: true, subtree: true });
+    }
+    syncChips();
 
     function triggerSend() {
       var ids = ['sendBtn', 'sendButton', 'btnSend', 'chatSend'];
@@ -586,7 +596,7 @@
       if (!btn) return;
 
       if (btn.dataset.action === 'voice') {
-        hide();
+        wrap.classList.add('hide');
         if (window.VoiceMode && VoiceMode.open) VoiceMode.open();
         return;
       }
@@ -595,7 +605,7 @@
       input.value = text;
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.focus();
-      setTimeout(function () { triggerSend(); hide(); }, 150);
+      setTimeout(triggerSend, 150);
     });
   }
 
