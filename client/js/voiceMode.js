@@ -1,6 +1,6 @@
 // ==========================================
-// VED AI — VOICE MODE CONTROLLER (FINAL FIX)
-// Auto-detect language + Toast feedback
+// VED AI — VOICE MODE (SUPER DEBUG VERSION)
+// Har step par toast — kahan ruk raha hai pata chalega
 // ==========================================
 
 const VoiceMode = (function () {
@@ -8,6 +8,8 @@ const VoiceMode = (function () {
     let overlay, statusEl, transcriptEl, waveformEl, waveBars, exitBtn;
     let isOpen = false;
     let isExiting = false;
+    let lastInterimText = "";
+    let interimTimeout = null;
 
     function toast(msg, duration = 3000) {
         const t = document.createElement("div");
@@ -59,53 +61,72 @@ const VoiceMode = (function () {
         waveBars.forEach(bar => bar.style.height = "6px");
     }
 
-    // DIRECT API CALL — bypass VedChat completely
-    async function directAPICall(text) {
-        console.log("🎤 Voice → Server:", text);
-        
-        // NO lang parameter — let server auto-detect!
-        const response = await fetch("/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text })
-        });
-
-        if (!response.ok) {
-            const errText = await response.text().catch(() => "");
-            throw new Error("Server " + response.status + ": " + errText.slice(0, 100));
+    // Process text when we think user finished speaking
+    async function processSpokenText(text) {
+        if (!text || text.trim().length === 0) {
+            toast("⚠️ Kuch suna nahi, dobara boliye");
+            if (isOpen) setTimeout(listenStep, 1000);
+            return;
         }
 
-        const data = await response.json();
-        console.log("🤖 Reply:", data.reply);
+        console.log("✅ Processing:", text);
+        toast("📤 Bhej raha hu: " + text, 2000);
         
-        // Add to main chat (if open)
-        const chatBox = document.getElementById("chatMessages");
-        if (chatBox) {
-            const userMsg = document.createElement("div");
-            userMsg.className = "user-message";
-            userMsg.innerHTML = text.replace(/\n/g, "<br>");
-            chatBox.appendChild(userMsg);
+        setState("thinking");
+        resetWave();
+
+        try {
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: text })
+            });
+
+            if (!response.ok) {
+                throw new Error("Server " + response.status);
+            }
+
+            const data = await response.json();
+            const reply = data.reply || "Sorry, reply nahi mila";
             
-            const botMsg = document.createElement("div");
-            botMsg.className = "bot-message";
-            botMsg.innerHTML = data.reply.replace(/\n/g, "<br>");
-            chatBox.appendChild(botMsg);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            console.log("🤖 Reply:", reply);
+            toast("📥 Reply aaya: " + reply.slice(0, 50) + "...", 2500);
+
+            // Add to chat
+            const chatBox = document.getElementById("chatMessages");
+            if (chatBox) {
+                const userMsg = document.createElement("div");
+                userMsg.className = "user-message";
+                userMsg.innerHTML = text.replace(/\n/g, "<br>");
+                chatBox.appendChild(userMsg);
+                
+                const botMsg = document.createElement("div");
+                botMsg.className = "bot-message";
+                botMsg.innerHTML = reply.replace(/\n/g, "<br>");
+                chatBox.appendChild(botMsg);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            if (!isOpen || isExiting) return;
+            speakStep(reply);
+        } catch (err) {
+            console.error("❌ API Error:", err);
+            toast("❌ Error: " + err.message, 4000);
+            if (isOpen) setTimeout(listenStep, 2000);
         }
-        
-        return data.reply || "Sorry, I couldn't generate a response.";
     }
 
     function open() {
         if (!overlay) return;
         if (!SpeechEngine || !SpeechEngine.isSupported) {
-            toast("❌ Browser voice support nahi hai. Chrome use karein.");
+            toast("❌ Browser voice support nahi hai");
             return;
         }
         if (isOpen) close();
 
         isOpen = true;
         isExiting = false;
+        lastInterimText = "";
         overlay.style.display = "";
         overlay.classList.add("active");
         setState("idle");
@@ -126,6 +147,7 @@ const VoiceMode = (function () {
             try { SpeechEngine.stopListening(); } catch (e) {}
             try { SpeechEngine.cancelSpeaking(); } catch (e) {}
         }
+        if (interimTimeout) clearTimeout(interimTimeout);
         overlay.classList.remove("active");
         resetWave();
         setTimeout(() => {
@@ -137,33 +159,43 @@ const VoiceMode = (function () {
         if (!isOpen || isExiting) return;
         setState("listening");
         if (transcriptEl) transcriptEl.textContent = "";
+        lastInterimText = "";
 
         SpeechEngine.startListening({
             onInterim: (text) => {
+                console.log("🎤 Interim:", text);
                 if (transcriptEl) transcriptEl.textContent = text;
+                lastInterimText = text;
+                
+                // Agar 3 second tak kuch nahi bola, toh process karo
+                if (interimTimeout) clearTimeout(interimTimeout);
+                interimTimeout = setTimeout(() => {
+                    if (lastInterimText && isOpen && !isExiting) {
+                        console.log("⏰ Timeout — processing last interim");
+                        processSpokenText(lastInterimText);
+                    }
+                }, 3000);
             },
             onAmplitude: (amp) => {
                 if (overlay && overlay.dataset.state === "listening") setWaveAmplitude(amp);
             },
             onFinal: async (text) => {
+                console.log("✅ Final:", text);
+                if (interimTimeout) clearTimeout(interimTimeout);
+                
                 if (isExiting || !isOpen) return;
                 if (transcriptEl) transcriptEl.textContent = text;
-                setState("thinking");
-                resetWave();
-
-                try {
-                    const reply = await directAPICall(text);
-                    if (!isOpen || isExiting) return;
-                    speakStep(reply);
-                } catch (err) {
-                    console.error("❌ Voice API Error:", err);
-                    toast("❌ Error: " + err.message, 4000);
-                    if (transcriptEl) transcriptEl.textContent = "Error: " + err.message;
-                    if (isOpen) setTimeout(listenStep, 2500);
-                }
+                
+                toast("✅ Sun liya: " + text, 1500);
+                await processSpokenText(text);
             },
             onEnd: () => {
-                if (isOpen && !isExiting && overlay && overlay.dataset.state === "listening") {
+                console.log("🔚 Recognition ended");
+                // Agar final nahi aaya lekin interim tha, toh process karo
+                if (lastInterimText && isOpen && !isExiting && overlay && overlay.dataset.state === "listening") {
+                    console.log("⏰ End without final — processing interim");
+                    processSpokenText(lastInterimText);
+                } else if (isOpen && !isExiting) {
                     setTimeout(listenStep, 400);
                 }
             },
@@ -176,20 +208,33 @@ const VoiceMode = (function () {
 
     function speakStep(reply) {
         if (!isOpen || isExiting) return;
+        
+        toast("🔊 Bolne ki koshish kar raha hu...", 1500);
         setState("speaking");
 
         if (!SpeechEngine || !SpeechEngine.speak) {
-            if (isOpen) setTimeout(listenStep, 1000);
+            toast("❌ SpeechEngine.speak nahi mila!");
+            if (isOpen) setTimeout(listenStep, 1500);
             return;
         }
 
         SpeechEngine.speak(reply, {
+            onStart: () => {
+                console.log("🔊 Audio started");
+                toast("🔊 Audio chal raha hai", 1000);
+            },
             onAmplitude: (amp) => {
                 if (overlay && overlay.dataset.state === "speaking") setWaveAmplitude(amp);
             },
             onEnd: () => {
+                console.log("🔚 Audio ended");
                 resetWave();
                 if (isOpen && !isExiting) setTimeout(listenStep, 500);
+            },
+            onError: () => {
+                toast("❌ Audio play nahi hua!");
+                resetWave();
+                if (isOpen && !isExiting) setTimeout(listenStep, 1500);
             }
         });
     }
