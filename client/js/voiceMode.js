@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — VOICE MODE CONTROLLER (FIXED)
+// VED AI — VOICE MODE CONTROLLER (BRIDGE FIXED)
 // Drives the fullscreen voice overlay:
 // idle → listening → thinking → speaking → loop
 // ==========================================
@@ -63,9 +63,48 @@ const VoiceMode = (function () {
     }
 
     // ---------------------------------
-    // OPEN / CLOSE (FIXED)
+    // ADD MESSAGE TO CHAT (so user sees it)
     // ---------------------------------
+    function addToChat(role, text) {
+        const chatBox = document.getElementById("chatMessages");
+        if (!chatBox) return;
+        
+        const msgDiv = document.createElement("div");
+        msgDiv.className = role === "user" ? "user-message" : "bot-message";
+        msgDiv.innerHTML = text.replace(/\n/g, "<br>");
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
+    // ---------------------------------
+    // DIRECT API CALL (bridge fix)
+    // ---------------------------------
+    async function sendToServer(text) {
+        console.log("🎤 Voice sending:", text);
+        
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text })
+        });
+
+        if (!response.ok) {
+            throw new Error("Server error: " + response.status);
+        }
+
+        const data = await response.json();
+        console.log("🤖 Voice reply:", data.reply);
+        
+        // Add to chat so user sees it
+        addToChat("user", text);
+        addToChat("bot", data.reply);
+        
+        return data.reply;
+    }
+
+    // ---------------------------------
+    // OPEN / CLOSE
+    // ---------------------------------
     function open() {
         if (!overlay) return;
 
@@ -74,7 +113,6 @@ const VoiceMode = (function () {
             return;
         }
 
-        // FORCE RESET — agar pehle se stuck hai toh clear karo
         if (isOpen) close();
 
         isOpen = true;
@@ -96,7 +134,6 @@ const VoiceMode = (function () {
         isExiting = true;
         isOpen = false;
 
-        // FORCE STOP — SpeechEngine ko properly kill karo
         if (SpeechEngine) {
             try { SpeechEngine.stopListening(); } catch (e) {}
             try { SpeechEngine.cancelSpeaking(); } catch (e) {}
@@ -105,7 +142,6 @@ const VoiceMode = (function () {
         overlay.classList.remove("active");
         resetWave();
 
-        // Hide karo taaki next time clean open ho
         setTimeout(() => {
             if (!isOpen) overlay.style.display = "none";
         }, 300);
@@ -114,7 +150,6 @@ const VoiceMode = (function () {
     // ---------------------------------
     // CONVERSATION LOOP
     // ---------------------------------
-
     function listenStep() {
         if (!isOpen || isExiting) return;
 
@@ -140,12 +175,22 @@ const VoiceMode = (function () {
                 resetWave();
 
                 try {
-                    const reply = await window.VedChat.sendToServer(text, { showThinkingBubble: false });
+                    // Use VedChat if available, otherwise direct API call
+                    let reply;
+                    if (window.VedChat && window.VedChat.sendToServer) {
+                        reply = await window.VedChat.sendToServer(text, { showThinkingBubble: false });
+                    } else {
+                        reply = await sendToServer(text);
+                    }
+                    
                     if (!isOpen || isExiting) return;
                     speakStep(reply);
                 } catch (err) {
-                    console.warn("Voice send error:", err);
-                    if (isOpen) setTimeout(listenStep, 800);
+                    console.error("❌ Voice send error:", err);
+                    if (isOpen) {
+                        if (transcriptEl) transcriptEl.textContent = "Sorry, I couldn't process that. Try again?";
+                        setTimeout(listenStep, 1500);
+                    }
                 }
             },
             onEnd: () => {
