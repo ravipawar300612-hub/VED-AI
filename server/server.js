@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI SERVER v8.7 (TRILINGUAL + QUOTA SAVER + LIVE INTERNET)
+// VED AI SERVER v8.8 (TRILINGUAL + QUOTA SAVER + WORKING LIVE INTERNET)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
@@ -27,13 +27,11 @@ if (!GEMINI_API_KEY) {
 // ===============================
 // MIDDLEWARE
 // ===============================
-// CORS - Allow all origins (Railway proxy handles security)
 app.use(cors({
     origin: true,
     credentials: true
 }));
 
-// Security Headers
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -70,14 +68,11 @@ function detectLanguage(text) {
     const t = String(text || "");
     const lower = t.toLowerCase();
 
-    // Devanagari script
     if (/[\u0900-\u097F]/.test(t)) {
         if (/(आहे|आहात|नाही|काय|कसे|कशी|झाले|झाली|मला|तुम्ही|होय|जावो|करू|हवी)/.test(t)) return "marathi";
         return "hindi";
     }
-    // Latin script Marathi (Hinglish-Marathi)
     if (/\b(kasa|kahasa|zala|zali|zale|tuza|tumhi|nako|ahes|ahet|havi|karu)\b/.test(lower)) return "marathi";
-    // Latin script Hindi / Hinglish
     if (/\b(kaise|kaisa|kya|hai|ho|namaste|namaskar|shukriya|dhanyavad|theek|accha|acha|haan|nahi|yaar|bhai|didi|matlab)\b/.test(lower)) return "hindi";
     return "english";
 }
@@ -209,29 +204,40 @@ function getGreetingResponse(message) {
 }
 
 // ===============================
-// 🔄 MODEL FALLBACK + GOOGLE SEARCH (Quota Saver #2 + Live Internet)
+// 🔄 MODEL FALLBACK + GOOGLE SEARCH (WORKING VERSION)
 // ===============================
 const MODEL_CHAIN = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
 
 async function generateWithFallback(contents, useSearch = false) {
     let lastError = null;
     
-    // Search grounding sirf primary model pe try karo
+    // Try with Google Search grounding on primary model
     if (useSearch) {
         try {
+            console.log("🔍 Attempting with Google Search grounding...");
             const result = await ai.models.generateContent({
                 model: MODEL_CHAIN[0],
                 contents,
                 tools: [{ google_search: {} }]
             });
-            console.log("✅ Used model with Google Search:", MODEL_CHAIN[0]);
-            return { result, usedSearch: true };
+            
+            // Check if search was actually used
+            const grounding = result.candidates?.[0]?.groundingMetadata;
+            const usedSearch = !!(grounding?.searchEntryPoint || grounding?.groundingChunks);
+            
+            if (usedSearch) {
+                console.log("✅ Google Search WAS used!");
+            } else {
+                console.log("⚠️ Search tool available but model chose not to use it");
+            }
+            
+            return { result, usedSearch };
         } catch (err) {
             const errMsg = String(err.message || err).toLowerCase();
+            console.warn("⚠️ Search grounding error:", err.message);
+            
             if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
                 console.warn("⚠️ Search grounding quota full, falling back to normal...");
-            } else {
-                console.warn("⚠️ Search grounding error:", err.message);
             }
             // Fall through to normal generation
         }
@@ -277,10 +283,8 @@ db.all(
 // ===============================
 // DATABASE INITIALIZATION
 // ===============================
-// Initialize all required tables
 const initDatabase = () => {
     try {
-        // Chats table for conversation history
         db.run(`CREATE TABLE IF NOT EXISTS chats (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             role TEXT NOT NULL,
@@ -288,14 +292,12 @@ const initDatabase = () => {
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
         
-        // Memories table for long-term memory
         db.run(`CREATE TABLE IF NOT EXISTS memories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             fact TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
         
-        // Blacklist table for scam patterns
         db.run(`CREATE TABLE IF NOT EXISTS blacklist (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pattern TEXT NOT NULL,
@@ -357,7 +359,7 @@ app.get("/", (req, res) => {
 });
 
 // ===============================
-// HEALTH CHECK ENDPOINT (Railway monitoring)
+// HEALTH CHECK ENDPOINT
 // ===============================
 app.get("/health", (req, res) => {
     res.json({ 
@@ -379,11 +381,10 @@ app.get("/history", (req, res) => {
 });
 
 // ===============================
-// CHAT ROUTE (TRILINGUAL + WARM PROFESSIONAL + QUOTA SAVER + LIVE INTERNET)
+// CHAT ROUTE (WITH WORKING GOOGLE SEARCH)
 // ===============================
 app.post("/chat", async (req, res) => {
     try {
-        // Validate input
         const message = validateMessage(req.body.message);
         if (!message) {
             return res.status(400).json({ error: "Invalid message" });
@@ -397,22 +398,20 @@ app.post("/chat", async (req, res) => {
             if (err) console.error("❌ Failed to save user message:", err.message);
         });
 
-        // ⚡ SMART CACHE — greetings ke liye 0 API call (trilingual)
+        // ⚡ SMART CACHE — greetings
         const cachedReply = getGreetingResponse(message);
         if (cachedReply) {
             console.log("⚡ CACHED greeting response (quota saved!)");
             db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", cachedReply], (err) => {
                 if (err) console.error("❌ Failed to save cached reply:", err.message);
             });
-            // Only keep last 50 messages in memory
             conversationHistory.push({ role: "user", parts: [{ text: message }] });
             conversationHistory.push({ role: "model", parts: [{ text: cachedReply }] });
             if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
             return res.json({ reply: sanitizeOutput(cachedReply), cached: true });
         }
 
-        // Client ne explicit language bheji toh wo priority
-                   // 🌐 LANGUAGE AUTO-DETECTION (Voice + Text dono ke liye)
+        // Language auto-detection
         function detectMsgLang(msg) {
             const t = String(msg || "");
             if (/[\u0900-\u097F]/.test(t)) {
@@ -469,7 +468,15 @@ IMPORTANT RULES:
 - Make EVERY user feel comfortable, respected and welcome
 - Never use markdown (*, #, _, backticks)
 - Write exactly how you'd speak naturally
-- If you're unsure about current facts, use Google Search to verify
+
+CRITICAL ACCURACY RULE:
+- You have access to Google Search tool. USE IT when:
+  * User asks about CURRENT events, news, or recent facts (2024-2026)
+  * User asks about current politicians, leaders, or government positions
+  * You are unsure about any fact that might have changed recently
+  * User asks "who is current CM/PM/president" or similar
+- When in doubt, SEARCH FIRST, then answer
+- Always provide accurate, up-to-date information
 ${langLine}${toneLine}
 
 ${memoryBlock}`;
@@ -478,8 +485,9 @@ ${memoryBlock}`;
 
         let response;
         let usedSearch = false;
+        
+        // ALWAYS try with Google Search for factual accuracy
         try {
-            // Try with Google Search first for current events/facts
             const genResult = await generateWithFallback(contents, true);
             response = genResult.result;
             usedSearch = genResult.usedSearch;
@@ -534,7 +542,6 @@ app.post("/vision", async (req, res) => {
     try {
         const { image, message } = req.body;
         
-        // Validate base64 image
         const base64Data = validateBase64(image);
         if (!base64Data) {
             return res.status(400).json({ reply: "Invalid image format." });
@@ -572,7 +579,6 @@ app.post("/document", async (req, res) => {
     try {
         const { document, message } = req.body;
         
-        // Validate base64 document
         const base64Data = validateBase64(document);
         if (!base64Data) {
             return res.status(400).json({ reply: "Invalid document format." });
@@ -648,7 +654,7 @@ app.get("/blacklist", (req, res) => {
 });
 
 // ===============================
-// SCAM CHECK ROUTE (HYBRID + BLACKLIST + fallback)
+// SCAM CHECK ROUTE
 // ===============================
 app.post("/check-scam", async (req, res) => {
     try {
@@ -801,13 +807,11 @@ app.use('/api/missions', require('./routes/missions')());
 
 const PORT = process.env.PORT || 3000;
 
-// Start server with error handling
 const server = app.listen(PORT, () => {
     console.log(`🚀 VED AI Server Running on Port ${PORT}`);
     console.log(`🌐 URL: http://localhost:${PORT}`);
 });
 
-// Handle server errors
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
         console.error(`❌ ERROR: Port ${PORT} is already in use`);
@@ -817,13 +821,11 @@ server.on('error', (err) => {
     process.exit(1);
 });
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
     console.error(`❌ UNCAUGHT EXCEPTION:`, err);
     process.exit(1);
 });
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
     console.error(`❌ UNHANDLED REJECTION at ${promise}:`, reason);
 });
