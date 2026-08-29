@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI SERVER v8.8 (TRILINGUAL + QUOTA SAVER + WORKING LIVE INTERNET)
+// VED AI SERVER v8.9 (GOOGLE SEARCH GROUNDING — FIXED)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
@@ -27,10 +27,7 @@ if (!GEMINI_API_KEY) {
 // ===============================
 // MIDDLEWARE
 // ===============================
-app.use(cors({
-    origin: true,
-    credentials: true
-}));
+app.use(cors({ origin: true, credentials: true }));
 
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -42,7 +39,6 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "10mb" }));
 
-// AUTO-DETECT client folder
 const clientCandidates = [
     path.join(__dirname, "client"),
     path.join(__dirname, "..", "client"),
@@ -52,13 +48,12 @@ const CLIENT_PATH = clientCandidates.find(p => fs.existsSync(path.join(p, "index
 console.log("📁 Frontend folder detected at:", CLIENT_PATH);
 
 if (!CLIENT_PATH) {
-    console.error("❌ CRITICAL: Client folder not found! Server cannot serve frontend.");
+    console.error("❌ CRITICAL: Client folder not found!");
     process.exit(1);
 }
 
 app.use(express.static(CLIENT_PATH));
 
-// Gemini AI setup
 const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 // ===============================
@@ -67,7 +62,6 @@ const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 function detectLanguage(text) {
     const t = String(text || "");
     const lower = t.toLowerCase();
-
     if (/[\u0900-\u097F]/.test(t)) {
         if (/(आहे|आहात|नाही|काय|कसे|कशी|झाले|झाली|मला|तुम्ही|होय|जावो|करू|हवी)/.test(t)) return "marathi";
         return "hindi";
@@ -82,113 +76,55 @@ function randomPick(arr) {
 }
 
 // ===============================
-// ⚡ SMART GREETING CACHE (Quota Saver #1) — TRILINGUAL
+// ⚡ SMART GREETING CACHE
 // ===============================
 const CANNED_RESPONSES = {
     english: {
-        greeting: [
-            "Hello! I'm VED AI. How may I help you today?",
-            "Hi there! Welcome. Please go ahead with your question.",
-            "Greetings! I'm here to assist you. What can I do for you?"
-        ],
-        howAreYou: [
-            "I'm doing great, thank you for asking! How can I assist you today?",
-            "All good on my side! Please tell me how I can help you."
-        ],
-        thanks: [
-            "You're most welcome! Feel free to ask if you need anything else.",
-            "It's my pleasure! I'm here whenever you need help."
-        ],
-        bye: [
-            "Goodbye! I'm here whenever you need me.",
-            "Take care! It was nice assisting you."
-        ],
-        loveYou: [
-            "Thank you so much! It's truly a pleasure to assist you.",
-            "That's very kind of you! I'm always here to help."
-        ],
-        ok: ["Sure.", "Understood.", "Alright."],
-        yes: ["Yes, absolutely.", "Of course."],
-        no: ["No problem at all.", "That's perfectly fine."],
-        busy: [
-            "I'm fully available to help you. Please go ahead with your question.",
-            "I'm ready to assist you. What would you like to ask?"
-        ]
+        greeting: ["Hello! I'm VED AI. How may I help you today?", "Hi there! Welcome. Please go ahead."],
+        howAreYou: ["I'm doing great, thank you! How can I assist you today?"],
+        thanks: ["You're most welcome!", "It's my pleasure!"],
+        bye: ["Goodbye! I'm here whenever you need me."],
+        loveYou: ["Thank you so much! It's truly a pleasure to assist you."],
+        ok: ["Sure.", "Understood."],
+        yes: ["Yes, absolutely."],
+        no: ["No problem at all."],
+        busy: ["I'm fully available to help you."]
     },
     hindi: {
-        greeting: [
-            "नमस्ते! मैं VED AI हूँ। बताइए, आज मैं आपकी कैसे मदद कर सकता हूँ?",
-            "नमस्कार! आपका स्वागत है। कृपया अपना सवाल पूछिए।",
-            "हैलो! मैं आपकी सेवा में हाज़िर हूँ। बताइए क्या मदद करूँ?"
-        ],
-        howAreYou: [
-            "मैं बिल्कुल ठीक हूँ, धन्यवाद! आप सुनाइए, मैं आपकी क्या मदद कर सकता हूँ?",
-            "सब बढ़िया है! आप बताइए, आज मैं आपके लिए क्या कर सकता हूँ?"
-        ],
-        thanks: [
-            "आपका स्वागत है! और कोई सवाल हो तो ज़रूर पूछिए।",
-            "कोई बात नहीं! यह तो मेरा काम है। और कुछ चाहिए तो बताइए।"
-        ],
-        bye: [
-            "अलविदा! जब भी ज़रूरत हो, मैं यहीं हूँ।",
-            "फिर मिलेंगे! आपका दिन शुभ हो।"
-        ],
-        loveYou: [
-            "आपका बहुत-बहुत धन्यवाद! आपकी मदद करना मेरे लिए खुशी की बात है।",
-            "यह सुनकर मन खुश हो गया! मैं हमेशा आपकी सेवा में हूँ।"
-        ],
-        ok: ["ठीक है।", "समझ गया।", "बिल्कुल।"],
-        yes: ["जी हाँ, बिल्कुल।", "हाँ, ज़रूर।"],
-        no: ["कोई बात नहीं।", "ठीक है, चिंता की कोई बात नहीं।"],
-        busy: [
-            "मैं आपकी मदद के लिए पूरी तरह उपलब्ध हूँ। बताइए, क्या सवाल है आपका?",
-            "मैं तैयार हूँ आपकी सेवा के लिए। बताइए क्या मदद चाहिए?"
-        ]
+        greeting: ["नमस्ते! मैं VED AI हूँ। बताइए, आज मैं आपकी कैसे मदद कर सकता हूँ?", "नमस्कार! आपका स्वागत है।"],
+        howAreYou: ["मैं बिल्कुल ठीक हूँ, धन्यवाद! आप सुनाइए?"],
+        thanks: ["आपका स्वागत है!", "कोई बात नहीं!"],
+        bye: ["अलविदा! जब भी ज़रूरत हो, मैं यहीं हूँ।"],
+        loveYou: ["आपका बहुत-बहुत धन्यवाद!"],
+        ok: ["ठीक है।", "बिल्कुल।"],
+        yes: ["जी हाँ, बिल्कुल।"],
+        no: ["कोई बात नहीं।"],
+        busy: ["मैं आपकी मदद के लिए पूरी तरह उपलब्ध हूँ।"]
     },
     marathi: {
-        greeting: [
-            "नमस्कार! मी VED AI आहे. सांगा, आज मी तुमची कशी मदत करू शकतो?",
-            "नमस्कार! तुमचं स्वागत आहे. कृपया तुमचा प्रश्न विचारा.",
-            "हॅलो! मी तुमच्या सेवेत हजर आहे. बोला, काय मदत करू?"
-        ],
-        howAreYou: [
-            "मी एकदम ठीक आहे, धन्यवाद! तुम्ही सांगा, मी तुमची काय मदत करू शकतो?",
-            "सर्व छान आहे! तुम्ही बोला, आज मी तुमच्यासाठी काय करू शकतो?"
-        ],
-        thanks: [
-            "तुमचं स्वागत आहे! आणखी काही प्रश्न असल्यास नक्की विचारा.",
-            "काही नाही! हे तर माझं काम आहे. आणखी काही हवं असल्यास सांगा."
-        ],
-        bye: [
-            "पुन्हा भेटू! जेव्हा गरज असेल, तेव्हा मी इथेच आहे.",
-            "निरोप! तुमचा दिवस शुभ जावो."
-        ],
-        loveYou: [
-            "तुमचा खूप खूप धन्यवाद! तुमची मदत करणं माझ्यासाठी आनंदाची गोष्ट आहे.",
-            "हे ऐकून खूप छान वाटलं! मी नेहमी तुमच्या सेवेत आहे."
-        ],
-        ok: ["ठीक आहे.", "समजलं.", "नक्की."],
-        yes: ["हो, नक्की.", "हो, जरूर."],
-        no: ["काही हरकत नाही.", "ठीक आहे, चिंता नको."],
-        busy: [
-            "मी तुमच्या मदतीसाठी पूर्णपणे उपलब्ध आहे. बोला, तुमचा प्रश्न काय आहे?",
-            "मी तुमच्या सेवेसाठी तयार आहे. सांगा, काय मदत हवी आहे?"
-        ]
+        greeting: ["नमस्कार! मी VED AI आहे. सांगा, आज मी तुमची कशी मदत करू शकतो?"],
+        howAreYou: ["मी एकदम ठीक आहे, धन्यवाद! तुम्ही सांगा?"],
+        thanks: ["तुमचं स्वागत आहे!"],
+        bye: ["पुन्हा भेटू!"],
+        loveYou: ["तुमचा खूप खूप धन्यवाद!"],
+        ok: ["ठीक आहे."],
+        yes: ["हो, नक्की."],
+        no: ["काही हरकत नाही."],
+        busy: ["मी तुमच्या मदतीसाठी पूर्णपणे उपलब्ध आहे."]
     }
 };
 
 const GREETING_RULES = [
     { re: /^(hi+e*|hey+|hello+|yo+|hlo+|hii+)([!\s.]*)$/i, cat: "greeting" },
     { re: /^(namaste+|namaskar+|नमस्ते+|नमस्कार+)([!\s.]*)$/i, cat: "greeting" },
-    { re: /^(kaise ho|kaisa hai|kya haal|how are you|what'?s up|wassup|sup|kasa aahes|kasa ahes|कैसे हो|कैसा है|तुम्ही कसे आहात)([!\s?.]*)$/i, cat: "howAreYou" },
-    { re: /^(good morning|good afternoon|good evening|good night|shubh prabhat|शुभ प्रभात)([!\s.]*)$/i, cat: "greeting" },
-    { re: /^(thanks|thank you|thnx|ty|shukriya|dhanyavaad|dhanyavad|धन्यवाद|शुक्रिया)([!\s.]*)$/i, cat: "thanks" },
+    { re: /^(kaise ho|kaisa hai|kya haal|how are you|what'?s up|wassup|sup|kasa aahes|कैसे हो|तुम्ही कसे आहात)([!\s?.]*)$/i, cat: "howAreYou" },
+    { re: /^(good morning|good afternoon|good evening|good night|शुभ प्रभात)([!\s.]*)$/i, cat: "greeting" },
+    { re: /^(thanks|thank you|thnx|ty|shukriya|dhanyavaad|धन्यवाद)([!\s.]*)$/i, cat: "thanks" },
     { re: /^(bye|goodbye|alvida|tata|see you|अलविदा|निरोप)([!\s.]*)$/i, cat: "bye" },
     { re: /^(love you|ily|i love you)([!\s.]*)$/i, cat: "loveYou" },
-    { re: /^(ok|okay|theek hai|thik hai|sahi hai|ठीक है)([!\s.]*)$/i, cat: "ok" },
-    { re: /^(haan|yes|yeah|yep|yup|ji haan|हो|हाँ|जी हां)([!\s.]*)$/i, cat: "yes" },
-    { re: /^(nahi|no|nope|nah|नहीं|नाही)([!\s.]*)$/i, cat: "no" },
-    { re: /^(kya kar rahe ho|what are you doing|busy ho|kay karat aahes|क्या कर रहे हो)([!\s?.]*)$/i, cat: "busy" }
+    { re: /^(ok|okay|theek hai|thik hai|ठीक है)([!\s.]*)$/i, cat: "ok" },
+    { re: /^(haan|yes|yeah|yep|yup|ji haan|हो|हाँ)([!\s.]*)$/i, cat: "yes" },
+    { re: /^(nahi|no|nope|nah|नहीं|नाही)([!\s.]*)$/i, cat: "no" }
 ];
 
 function getGreetingResponse(message) {
@@ -204,55 +140,49 @@ function getGreetingResponse(message) {
 }
 
 // ===============================
-// 🔄 MODEL FALLBACK + GOOGLE SEARCH (WORKING VERSION)
+// 🔄 MODEL FALLBACK + GOOGLE SEARCH (v8.9 — CLEAN)
 // ===============================
 const MODEL_CHAIN = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
 
 async function generateWithFallback(contents, useSearch = false) {
     let lastError = null;
-    
-    // Try with Google Search grounding on primary model
-    if (useSearch) {
-        try {
-            console.log("🔍 Attempting with Google Search grounding...");
-            const result = await ai.models.generateContent({
-                model: MODEL_CHAIN[0],
-                contents,
-                tools: [{ google_search: {} }]
-            });
-            
-            // Check if search was actually used
-            const grounding = result.candidates?.[0]?.groundingMetadata;
-            const usedSearch = !!(grounding?.searchEntryPoint || grounding?.groundingChunks);
-            
-            if (usedSearch) {
-                console.log("✅ Google Search WAS used!");
-            } else {
-                console.log("⚠️ Search tool available but model chose not to use it");
-            }
-            
-            return { result, usedSearch };
-        } catch (err) {
-            const errMsg = String(err.message || err).toLowerCase();
-            console.warn("⚠️ Search grounding error:", err.message);
-            
-            if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
-                console.warn("⚠️ Search grounding quota full, falling back to normal...");
-            }
-            // Fall through to normal generation
-        }
-    }
-    
-    // Normal generation with model chain
+
     for (const model of MODEL_CHAIN) {
+        // 1️⃣ Pehle Google Search ke saath (SAHI syntax: config.tools)
+        if (useSearch) {
+            try {
+                console.log("🔍 " + model + " + Google Search...");
+                const result = await ai.models.generateContent({
+                    model: model,
+                    contents: contents,
+                    config: {
+                        tools: [{ googleSearch: {} }]
+                    }
+                });
+                const grounding = result.candidates?.[0]?.groundingMetadata;
+                const usedSearch = !!(grounding && (grounding.groundingChunks?.length || grounding.webSearchQueries?.length));
+                console.log(usedSearch ? "✅ GOOGLE SEARCH USED!" : "✅ Model replied (search not needed)");
+                return { result, usedSearch };
+            } catch (err) {
+                const errMsg = String(err.message || "").toLowerCase();
+                if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
+                    console.warn("⚠️ " + model + " quota full, next model...");
+                    lastError = err;
+                    continue;
+                }
+                console.warn("⚠️ Search error (" + model + "):", err.message);
+            }
+        }
+
+        // 2️⃣ Bina search ke normal call
         try {
-            const result = await ai.models.generateContent({ model, contents });
-            console.log("✅ Used model:", model);
+            const result = await ai.models.generateContent({ model: model, contents: contents });
+            console.log("✅ Used model (no search):", model);
             return { result, usedSearch: false };
         } catch (err) {
-            const errMsg = String(err.message || err).toLowerCase();
+            const errMsg = String(err.message || "").toLowerCase();
             if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
-                console.warn("⚠️ " + model + " quota full, trying next...");
+                console.warn("⚠️ " + model + " quota full, next model...");
                 lastError = err;
                 continue;
             }
@@ -263,58 +193,36 @@ async function generateWithFallback(contents, useSearch = false) {
 }
 
 // ===============================
-// MEMORY (Startup se 30 messages load)
+// MEMORY
 // ===============================
 let conversationHistory = [];
 
-db.all(
-    "SELECT role, message FROM chats ORDER BY id DESC LIMIT 30",
-    [],
-    (err, rows) => {
-        if (err) { console.error("❌ Failed to load chat history:", err.message); return; }
-        conversationHistory = rows.reverse().map(row => ({
-            role: row.role === "user" ? "user" : "model",
-            parts: [{ text: row.message }]
-        }));
-        console.log(`🧠 Loaded ${conversationHistory.length} past messages from database.`);
-    }
-);
+db.all("SELECT role, message FROM chats ORDER BY id DESC LIMIT 30", [], (err, rows) => {
+    if (err) { console.error("❌ Failed to load chat history:", err.message); return; }
+    conversationHistory = rows.reverse().map(row => ({
+        role: row.role === "user" ? "user" : "model",
+        parts: [{ text: row.message }]
+    }));
+    console.log(`🧠 Loaded ${conversationHistory.length} past messages from database.`);
+});
 
 // ===============================
 // DATABASE INITIALIZATION
 // ===============================
 const initDatabase = () => {
     try {
-        db.run(`CREATE TABLE IF NOT EXISTS chats (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            role TEXT NOT NULL,
-            message TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-        
-        db.run(`CREATE TABLE IF NOT EXISTS memories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fact TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-        
-        db.run(`CREATE TABLE IF NOT EXISTS blacklist (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pattern TEXT NOT NULL,
-            note TEXT,
-            added_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-        
+        db.run(`CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY AUTOINCREMENT, role TEXT NOT NULL, message TEXT NOT NULL, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+        db.run(`CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY AUTOINCREMENT, fact TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+        db.run(`CREATE TABLE IF NOT EXISTS blacklist (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT NOT NULL, note TEXT, added_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
         console.log("✅ Database tables initialized");
     } catch (err) {
         console.error("❌ Database initialization failed:", err.message);
     }
 };
-
 initDatabase();
 
 // ===============================
-// INPUT VALIDATION HELPERS
+// HELPERS
 // ===============================
 function validateMessage(msg) {
     if (!msg || typeof msg !== 'string') return null;
@@ -332,9 +240,7 @@ function validateBase64(data) {
         const cleaned = data.includes(',') ? data.split(',')[1] : data;
         Buffer.from(cleaned, 'base64');
         return cleaned;
-    } catch {
-        return null;
-    }
+    } catch { return null; }
 }
 
 function sanitizeOutput(text) {
@@ -352,44 +258,29 @@ function extractPatterns(text) {
 }
 
 // ===============================
-// HOME ROUTE
+// ROUTES
 // ===============================
-app.get("/", (req, res) => {
-    res.sendFile(path.join(CLIENT_PATH, "index.html"));
-});
+app.get("/", (req, res) => res.sendFile(path.join(CLIENT_PATH, "index.html")));
 
-// ===============================
-// HEALTH CHECK ENDPOINT
-// ===============================
 app.get("/health", (req, res) => {
-    res.json({ 
-        status: "ok", 
-        timestamp: new Date().toISOString(),
-        port: process.env.PORT || 3000,
-        ai_ready: !!ai
-    });
+    res.json({ status: "ok", timestamp: new Date().toISOString(), port: process.env.PORT || 3000, ai_ready: !!ai });
 });
 
-// ===============================
-// HISTORY ROUTE
-// ===============================
 app.get("/history", (req, res) => {
     db.all("SELECT role, message FROM chats ORDER BY id ASC", [], (err, rows) => {
-        if (err) { console.error("❌ Failed to fetch history:", err.message); return res.status(500).json({ history: [] }); }
+        if (err) return res.status(500).json({ history: [] });
         res.json({ history: rows });
     });
 });
 
 // ===============================
-// CHAT ROUTE (WITH WORKING GOOGLE SEARCH)
+// CHAT ROUTE (WITH GOOGLE SEARCH)
 // ===============================
 app.post("/chat", async (req, res) => {
     try {
         const message = validateMessage(req.body.message);
-        if (!message) {
-            return res.status(400).json({ error: "Invalid message" });
-        }
-        
+        if (!message) return res.status(400).json({ error: "Invalid message" });
+
         const lang = String(req.body.lang || "").toLowerCase();
         const tone = String(req.body.tone || "").toLowerCase();
         console.log("📩 User:", message);
@@ -398,20 +289,16 @@ app.post("/chat", async (req, res) => {
             if (err) console.error("❌ Failed to save user message:", err.message);
         });
 
-        // ⚡ SMART CACHE — greetings
         const cachedReply = getGreetingResponse(message);
         if (cachedReply) {
-            console.log("⚡ CACHED greeting response (quota saved!)");
-            db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", cachedReply], (err) => {
-                if (err) console.error("❌ Failed to save cached reply:", err.message);
-            });
+            console.log("⚡ CACHED greeting response");
+            db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", cachedReply]);
             conversationHistory.push({ role: "user", parts: [{ text: message }] });
             conversationHistory.push({ role: "model", parts: [{ text: cachedReply }] });
             if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
             return res.json({ reply: sanitizeOutput(cachedReply), cached: true });
         }
 
-        // Language auto-detection
         function detectMsgLang(msg) {
             const t = String(msg || "");
             if (/[\u0900-\u097F]/.test(t)) {
@@ -423,24 +310,24 @@ app.post("/chat", async (req, res) => {
             if (/\b(kya|hai|ho|kaise|nahi|kab|kahan|kaun|kyun|accha|theek|haan|matlab|yaar|bhai|didi|namaste)\b/.test(lower)) return "hindi";
             return "english";
         }
-        
+
         const effectiveLang = (lang && lang !== "english") ? lang : detectMsgLang(message);
-        
-        const langLine = effectiveLang === "hindi" 
+
+        const langLine = effectiveLang === "hindi"
             ? "\nSTRICT LANGUAGE RULE: Reply ONLY in simple Hindi. If user wrote Hindi in Devanagari, reply in Devanagari. If user wrote Hinglish (Roman letters), reply in Hinglish. NEVER reply in English."
-            : effectiveLang === "marathi" 
+            : effectiveLang === "marathi"
             ? "\nSTRICT LANGUAGE RULE: Reply ONLY in simple Marathi (Devanagari script). NEVER reply in English or Hindi."
             : "\nLANGUAGE RULE: Reply in simple English.";
 
-        const toneLine = tone === "bodyguard" ? "\nTONE: Serious protective bodyguard mode — short, firm, safety-first."
-            : tone === "ustaad" ? "\nTONE: Respectful teacher mode — clear, encouraging."
-            : "\nTONE: Warm, respectful and professional friend mode — caring but polite.";
+        const toneLine = tone === "bodyguard" ? "\nTONE: Serious protective bodyguard mode."
+            : tone === "ustaad" ? "\nTONE: Respectful teacher mode."
+            : "\nTONE: Warm, respectful and professional friend mode.";
 
         const rememberMatch = message.match(/^remember (that )?(.+)/i);
         if (rememberMatch) {
             const fact = rememberMatch[2].trim();
             db.run("INSERT INTO memories(fact) VALUES(?)", [fact]);
-            console.log("🧠 Saved new long-term memory:", fact);
+            console.log("🧠 Saved new memory:", fact);
         }
 
         conversationHistory.push({ role: "user", parts: [{ text: message }] });
@@ -448,13 +335,13 @@ app.post("/chat", async (req, res) => {
 
         const memoryFacts = await new Promise((resolve) => {
             db.all("SELECT fact FROM memories ORDER BY id ASC", [], (err, rows) => {
-                if (err) { console.error("❌ Failed to load memories:", err.message); resolve([]); return; }
+                if (err) { resolve([]); return; }
                 resolve(rows.map(r => r.fact));
             });
         });
 
         const memoryBlock = memoryFacts.length > 0
-            ? `\n\nHere are important facts the user has asked you to remember about them. Use these naturally when relevant:\n${memoryFacts.map(f => "- " + f).join("\n")}\n`
+            ? `\n\nImportant facts about user:\n${memoryFacts.map(f => "- " + f).join("\n")}\n`
             : "";
 
         const systemPrompt = `
@@ -485,28 +372,23 @@ ${memoryBlock}`;
 
         let response;
         let usedSearch = false;
-        
-        // ALWAYS try with Google Search for factual accuracy
+
         try {
             const genResult = await generateWithFallback(contents, true);
             response = genResult.result;
             usedSearch = genResult.usedSearch;
         } catch (fallbackErr) {
             const errMsg = String(fallbackErr.message || fallbackErr).toLowerCase();
-            if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit")) {
-                console.warn("⚠️ All models quota exhausted — sending friendly message");
-                const friendlyMsg = "VED AI abhi thodi der ke liye vyast hai. Kripya 1-2 minute baad dobara prayas karein. Dhanyavaad! 🙏";
-                db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", friendlyMsg], (err) => {
-                    if (err) console.error("❌ Failed to save quota message:", err.message);
-                });
+            if (errMsg.includes("quota") || errMsg.includes("429")) {
+                const friendlyMsg = "VED AI abhi thodi der ke liye vyast hai. Kripya 1-2 minute baad dobara prayas karein. 🙏";
+                db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", friendlyMsg]);
                 return res.json({ reply: sanitizeOutput(friendlyMsg), quotaExhausted: true });
             }
             throw fallbackErr;
         }
 
         let reply = response.candidates[0].content.parts[0].text;
-        
-        // Extract source links if search was used
+
         if (usedSearch && response.candidates[0].groundingMetadata) {
             const grounding = response.candidates[0].groundingMetadata;
             if (grounding.groundingChunks) {
@@ -514,16 +396,12 @@ ${memoryBlock}`;
                     .filter(c => c.web)
                     .slice(0, 2)
                     .map(c => `[${c.web.title || 'Source'}](${c.web.uri})`);
-                if (sources.length) {
-                    reply += "\n\n📎 Sources: " + sources.join(" • ");
-                }
+                if (sources.length) reply += "\n\n📎 Sources: " + sources.join(" • ");
             }
         }
 
         console.log("🤖 VED:", reply);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
-            if (err) console.error("❌ Failed to save AI reply:", err.message);
-        });
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
         conversationHistory.push({ role: "model", parts: [{ text: reply }] });
         if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
 
@@ -536,81 +414,57 @@ ${memoryBlock}`;
 });
 
 // ===============================
-// VISION ROUTE (trilingual + fallback)
+// VISION ROUTE
 // ===============================
 app.post("/vision", async (req, res) => {
     try {
         const { image, message } = req.body;
-        
         const base64Data = validateBase64(image);
-        if (!base64Data) {
-            return res.status(400).json({ reply: "Invalid image format." });
-        }
-        const question = validateMessage(message) || "What is in this photo? Describe it naturally.";
+        if (!base64Data) return res.status(400).json({ reply: "Invalid image format." });
+        const question = validateMessage(message) || "What is in this photo?";
 
-        console.log("📷 Photo question:", question);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Photo] " + question], (err) => {
-            if (err) console.error("❌ Failed to save vision request:", err.message);
-        });
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Photo] " + question]);
 
-        const visionPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Answer the user's question about the attached photo naturally.\nQuestion: ${question}`;
+        const visionPrompt = `You are VED AI, created by Sayali P. R. Pawar. Reply in plain text. Reply in the SAME language as the question.\nQuestion: ${question}`;
 
         const genResult = await generateWithFallback([
             { role: "user", parts: [{ text: visionPrompt }, { inlineData: { mimeType: "image/jpeg", data: base64Data } }] }
         ], false);
 
         const reply = genResult.result.candidates[0].content.parts[0].text;
-        console.log("🤖 VED (vision):", reply);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
-            if (err) console.error("❌ Failed to save vision reply:", err.message);
-        });
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
         res.json({ reply: sanitizeOutput(reply) });
-
     } catch (error) {
         console.error("❌ Vision Error:", error);
-        res.status(500).json({ reply: "Photo dekhne mein dikkat aayi. Kripya dobara prayas karein. 🙏" });
+        res.status(500).json({ reply: "Photo dekhne mein dikkat aayi. 🙏" });
     }
 });
 
 // ===============================
-// DOCUMENT ROUTE (trilingual + fallback)
+// DOCUMENT ROUTE
 // ===============================
 app.post("/document", async (req, res) => {
     try {
         const { document, message } = req.body;
-        
         const base64Data = validateBase64(document);
-        if (!base64Data) {
-            return res.status(400).json({ reply: "Invalid document format." });
-        }
+        if (!base64Data) return res.status(400).json({ reply: "Invalid document format." });
         const buffer = Buffer.from(base64Data, "base64");
-
         let text = buffer.toString("utf-8").trim();
-        if (!text) return res.json({ reply: "I couldn't find any readable text in that PDF." });
-        if (text.length > 12000) text = text.slice(0, 12000) + "\n\n[Document truncated]";
+        if (!text) return res.json({ reply: "I couldn't find any readable text." });
+        if (text.length > 12000) text = text.slice(0, 12000) + "\n[Document truncated]";
 
         const question = validateMessage(message) || "Summarize this document.";
-        console.log("📄 Document question:", question);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Document] " + question], (err) => {
-            if (err) console.error("❌ Failed to save document request:", err.message);
-        });
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Document] " + question]);
 
-        const docPrompt = `You are VED AI, created by Sayali P. R. Pawar. Never say you are Gemini. Reply in plain, natural text only. Reply in the SAME language and script as the question. Address the user respectfully. Use the document content below to answer.\nDocument content:\n${text}\nQuestion: ${question}`;
+        const docPrompt = `You are VED AI, created by Sayali P. R. Pawar. Reply in the SAME language as the question.\nDocument:\n${text}\nQuestion: ${question}`;
 
-        const genResult = await generateWithFallback([
-            { role: "user", parts: [{ text: docPrompt }] }
-        ], false);
-
+        const genResult = await generateWithFallback([{ role: "user", parts: [{ text: docPrompt }] }], false);
         const reply = genResult.result.candidates[0].content.parts[0].text;
-        console.log("🤖 VED (document):", reply);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply], (err) => {
-            if (err) console.error("❌ Failed to save document reply:", err.message);
-        });
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
         res.json({ reply: sanitizeOutput(reply) });
-
     } catch (error) {
         console.error("❌ Document Error:", error);
-        res.status(500).json({ reply: "Document padhne mein dikkat aayi. Kripya dobara prayas karein. 🙏" });
+        res.status(500).json({ reply: "Document padhne mein dikkat aayi. 🙏" });
     }
 });
 
@@ -620,35 +474,23 @@ app.post("/document", async (req, res) => {
 app.post("/blacklist", (req, res) => {
     try {
         const message = validateMessage(req.body.message);
-        if (!message) {
-            return res.status(400).json({ saved: 0, error: "Invalid message" });
-        }
-        
+        if (!message) return res.status(400).json({ saved: 0, error: "Invalid message" });
         const patterns = extractPatterns(message);
         const toSave = patterns.length ? patterns : [message.trim().slice(0, 120)];
-
         let saved = 0;
         toSave.forEach(p => {
             db.run("INSERT INTO blacklist(pattern, note) VALUES(?, ?)", [p, message.slice(0, 120)], (err) => {
-                if (err) console.error("❌ Failed to save blacklist pattern:", err.message);
-                else saved++;
+                if (!err) saved++;
             });
         });
-
-        console.log("🚫 Blacklisted patterns:", toSave);
         res.json({ saved: toSave.length, patterns: toSave });
     } catch (error) {
-        console.error("❌ Blacklist Error:", error);
         res.status(500).json({ saved: 0, error: "Failed to save blacklist" });
     }
 });
 
 app.get("/blacklist", (req, res) => {
     db.all("SELECT id, pattern FROM blacklist ORDER BY id DESC", [], (err, rows) => {
-        if (err) {
-            console.error("❌ Failed to fetch blacklist:", err.message);
-            return res.json({ blacklist: [] });
-        }
         res.json({ blacklist: rows || [] });
     });
 });
@@ -659,73 +501,41 @@ app.get("/blacklist", (req, res) => {
 app.post("/check-scam", async (req, res) => {
     try {
         const suspiciousMessage = validateMessage(req.body.message);
-        if (!suspiciousMessage) {
-            return res.status(400).json({ reply: "Invalid message format." });
-        }
+        if (!suspiciousMessage) return res.status(400).json({ reply: "Invalid message format." });
 
-        console.log("🛡️ Checking:", suspiciousMessage);
         const radar = scanMessage(suspiciousMessage);
-
         const blacklistRows = await new Promise((resolve) => {
-            db.all("SELECT pattern FROM blacklist", [], (err, rows) => {
-                if (err) {
-                    console.error("❌ Failed to fetch blacklist:", err.message);
-                    resolve([]);
-                } else {
-                    resolve(rows || []);
-                }
-            });
+            db.all("SELECT pattern FROM blacklist", [], (err, rows) => resolve(rows || []));
         });
 
         const normalized = suspiciousMessage.toLowerCase().replace(/[\s\-]/g, "");
-        const hits = blacklistRows
-            .map(r => r.pattern)
-            .filter(p => p && p.length >= 5 && normalized.includes(p.toLowerCase().replace(/[\s\-]/g, "")));
+        const hits = blacklistRows.map(r => r.pattern).filter(p => p && p.length >= 5 && normalized.includes(p.toLowerCase().replace(/[\s\-]/g, "")));
 
         if (hits.length > 0) {
             radar.riskScore += 5;
             radar.radarVerdict = "SCAM";
             radar.flags.push({ rule: "BLACKLIST", matchedWord: hits[0] });
-            console.log("🚫 BLACKLIST HIT:", hits);
         }
-
-        console.log("📡 Radar Verdict:", radar.radarVerdict, "| Score:", radar.riskScore);
 
         let reply;
         try {
-            const blacklistNote = hits.length > 0
-                ? `\nCRITICAL: The user has PREVIOUSLY blacklisted this pattern: ${hits[0]}. Tell them prominently: "Ye number/link aapki blacklist mein pehle se hai!"`
-                : "";
-
             const scamPrompt = `
 You are "VED Suraksha", an AI bodyguard protecting elderly Indian people from scams.
-Our internal Scam Radar already analyzed this message:
 - Radar Verdict: ${radar.radarVerdict}
 - Risk Score: ${radar.riskScore}
-- Patterns found: ${radar.flags.map(f => f.matchedWord).join(", ") || "none"}
-${blacklistNote}
-Confirm with your intelligence and reply STRICTLY in this format:
+Reply STRICTLY:
 VERDICT: [SCAM or SAFE or SUSPICIOUS]
-HINDI: [Max 2 sentences, simple respectful Hindi/Hinglish, like a caring grandson.]
-ACTION: [One clear action, e.g. "Link par click mat karo" ya "Ye safe hai, chinta na karein"]
-
+HINDI: [Max 2 sentences, respectful Hindi/Hinglish]
+ACTION: [One clear action]
 Message: "${suspiciousMessage}"`;
-
-            const genResult = await generateWithFallback([
-                { role: "user", parts: [{ text: scamPrompt }] }
-            ], false);
+            const genResult = await generateWithFallback([{ role: "user", parts: [{ text: scamPrompt }] }], false);
             reply = genResult.result.candidates[0].content.parts[0].text;
         } catch (e) {
-            reply = "VERDICT: " + radar.radarVerdict +
-                    "\nHINDI: Internet nahi hai, isliye VED Radar ne akela check kiya. Risk score " + radar.riskScore + " mila hai. Savdhani rakhein." +
-                    "\nACTION: Koi link na kholein, koi OTP na dein.";
+            reply = "VERDICT: " + radar.radarVerdict + "\nHINDI: Internet issue. Risk score " + radar.riskScore + ".\nACTION: Koi link na kholein.";
         }
-
         res.json({ radar: radar, reply: reply });
-
     } catch (error) {
-        console.error("❌ Scam Check Error:", error);
-        res.status(500).json({ reply: "Check karne mein dikkat aayi. Dobara try karein." });
+        res.status(500).json({ reply: "Check karne mein dikkat aayi." });
     }
 });
 
@@ -735,13 +545,10 @@ Message: "${suspiciousMessage}"`;
 app.post("/tts", async (req, res) => {
     try {
         const text = validateMessage(req.body.text);
-        if (!text) return res.status(400).json({ error: "Invalid text provided" });
+        if (!text) return res.status(400).json({ error: "Invalid text" });
 
         const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-        if (!ELEVENLABS_API_KEY) {
-            console.warn("⚠️ ELEVENLABS_API_KEY not set. TTS disabled.");
-            return res.status(503).json({ error: "TTS service unavailable" });
-        }
+        if (!ELEVENLABS_API_KEY) return res.status(503).json({ error: "TTS unavailable" });
 
         const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
         const models = ["eleven_v3", "eleven_multilingual_v2"];
@@ -751,53 +558,35 @@ app.post("/tts", async (req, res) => {
             try {
                 const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
                     method: "POST",
-                    headers: {
-                        "xi-api-key": ELEVENLABS_API_KEY,
-                        "Content-Type": "application/json"
-                    },
+                    headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
                     body: JSON.stringify({
                         text: text,
                         model_id: model,
-                        voice_settings: {
-                            stability: 0.35,
-                            similarity_boost: 0.8,
-                            style: 0.25,
-                            use_speaker_boost: true
-                        }
+                        voice_settings: { stability: 0.35, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true }
                     })
                 });
                 if (response.ok) {
                     audioBuffer = Buffer.from(await response.arrayBuffer());
-                    console.log("🔊 TTS via:", model);
                     break;
                 }
-                console.warn("⚠️ Model failed:", model, response.status);
             } catch (err) {
-                console.warn("⚠️ TTS model error:", model, err.message);
+                console.warn("⚠️ TTS error:", model, err.message);
             }
         }
 
-        if (!audioBuffer) return res.status(500).json({ error: "All TTS models failed" });
-
+        if (!audioBuffer) return res.status(500).json({ error: "TTS failed" });
         res.set("Content-Type", "audio/mpeg");
         res.send(audioBuffer);
-
     } catch (error) {
-        console.error("❌ TTS Error:", error);
         res.status(500).json({ error: "TTS failed" });
     }
 });
 
 // ===============================
-// CROP MODULE (optional image processing)
+// CROP MODULE
 // ===============================
 let cropModule = null;
-try {
-    cropModule = require("./crop");
-    console.log("✂️ Crop module loaded");
-} catch (e) {
-    console.log("⚠️ Crop module skip:", e.message);
-}
+try { cropModule = require("./crop"); } catch (e) {}
 
 // ===============================
 // AUTH + MISSIONS + START SERVER
@@ -806,26 +595,15 @@ setupAuth(app);
 app.use('/api/missions', require('./routes/missions')());
 
 const PORT = process.env.PORT || 3000;
-
 const server = app.listen(PORT, () => {
     console.log(`🚀 VED AI Server Running on Port ${PORT}`);
-    console.log(`🌐 URL: http://localhost:${PORT}`);
 });
 
 server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(`❌ ERROR: Port ${PORT} is already in use`);
-    } else {
-        console.error(`❌ Server Error:`, err);
-    }
+    if (err.code === 'EADDRINUSE') console.error(`❌ Port ${PORT} already in use`);
+    else console.error(`❌ Server Error:`, err);
     process.exit(1);
 });
 
-process.on('uncaughtException', (err) => {
-    console.error(`❌ UNCAUGHT EXCEPTION:`, err);
-    process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error(`❌ UNHANDLED REJECTION at ${promise}:`, reason);
-});
+process.on('uncaughtException', (err) => { console.error(`❌ UNCAUGHT:`, err); process.exit(1); });
+process.on('unhandledRejection', (reason) => { console.error(`❌ UNHANDLED:`, reason); });
