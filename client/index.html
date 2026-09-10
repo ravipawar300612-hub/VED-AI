@@ -713,5 +713,36 @@
   else document.addEventListener('DOMContentLoaded',boot);
 })();
 </script>
+<!-- ═══ V4 NUCLEAR HIDE — pill touch / Enter = chips gayab ═══ -->
+<script>
+(function(){
+  function hideChips(){
+    var w = document.getElementById('vedActions');
+    if(w){
+      w.style.opacity = '0';
+      w.style.visibility = 'hidden';
+      w.style.pointerEvents = 'none';
+      w.style.transform = 'translateY(-8px)';
+    }
+  }
+  function bind(){
+    var input = document.getElementById('chatInput') || document.querySelector('input[type="text"]');
+    if(!input){ setTimeout(bind, 400); return; }
+    var pill = input.closest('div[class*="input"]') || input.parentElement;
+
+    // Enter = send = chips gayab
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Enter') setTimeout(hideChips, 120);
+    });
+
+    // pill ke andar koi bhi click (send / mic / camera) = chips gayab
+    document.addEventListener('click', function(e){
+      if(pill.contains(e.target)) setTimeout(hideChips, 120);
+    }, true);
+  }
+  if(document.readyState !== 'loading') bind();
+  else document.addEventListener('DOMContentLoaded', bind);
+})();
+</script>
 </body>
 </html>
