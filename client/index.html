@@ -18,7 +18,7 @@
             max-height: 140px; opacity: 1; overflow: hidden;
             transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        body.chat-active .container h1, body.chat-active .container .tagline, body.chat-active .container .subtitle {
+        body.chat-active .container h1, .container .tagline, body.chat-active .subtitle {
             max-height: 0; opacity: 0; margin: 0 !important; padding: 0 !important;
         }
         .chat-box { transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -84,7 +84,7 @@
         border: 2px solid rgba(255,255,255,0.5) !important; background: rgba(0,0,0,0.7) !important;
         backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;
         color: #ffffff !important; font-size: 15px !important; font-weight: 700 !important;
-        letter-spacing: 0.05em !important; cursor: pointer !important;
+        letter-spacing: 0.05em !important; cursor: pointer;
         opacity: 0; animation: vedSkipFadeIn 0.8s ease 0.5s forwards;
     }
     #vedSkipBtn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
@@ -197,7 +197,6 @@
 <script src="js/mobileMenu.js?v=2102"></script>
 <script src="js/suraksha.js?v=2102"></script>
 <script src="js/healthMode.js?v=2102"></script>
-<script src="js/cropMode.js?v=2102"></script>
 <script src="js/missions.js?v=2102"></script>
 
 <!-- 🎬 CINEMATIC TRANSITION -->
@@ -262,7 +261,7 @@
         display: flex !important; align-items: center !important; justify-content: center !important;
         opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
         transform: none !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
-        z-index: 2147483647 !important; cursor: pointer !important;
+        z-index: 2147483647 !important; cursor: pointer;
     }
     #voiceExitBtn:active, #cameraExitBtn:active { transform: scale(0.94) !important; background: rgba(255,255,255,0.15) !important; }
 </style>
@@ -348,7 +347,7 @@
         border-radius: 12px !important; background: rgba(15,18,24,0.85) !important;
         backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important;
         color: #ffffff !important; border: 1px solid rgba(255,255,255,0.2) !important;
-        font-size: 20px !important; cursor: pointer !important;
+        font-size: 20px !important; cursor: pointer;
     }
 </style>
 <script>
@@ -526,101 +525,12 @@
     });
 })();
 </script>
-<!-- ═══ VED QUICK ACTIONS — PREMIUM (SMART HIDE) ═══ -->
-<style>
-  .ved-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:680px;margin:0 auto 16px;padding:0 16px;opacity:0;transform:translateY(10px);animation:vedIn .7s ease .25s forwards;transition:opacity .4s ease,transform .4s ease}
-  @keyframes vedIn{to{opacity:1;transform:none}}
-  .ved-actions.hide{opacity:0;transform:translateY(-8px);pointer-events:none}
-  .ved-action{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,20,26,.38);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:rgba(255,255,255,.88);font-size:13px;font-weight:500;letter-spacing:.3px;cursor:pointer;transition:all .25s ease;box-shadow:0 2px 12px rgba(0,0,0,.18);font-family:inherit}
-  .ved-action .ico{font-size:15px}
-  .ved-action:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.28)}
-  .ved-action:active{transform:scale(.96)}
-  @media(max-width:600px){.ved-action{font-size:12px;padding:9px 14px}}
-</style>
 
-<script>
-(function () {
-  var TRIES = 0;
-
-  function findInput() {
-    return document.getElementById('chatInput') ||
-           document.querySelector('input[placeholder*="Ask"]') ||
-           document.querySelector('input[type="text"]');
-  }
-
-  function boot() {
-    var input = findInput();
-    if (!input) {
-      if (TRIES++ < 40) setTimeout(boot, 300);
-      return;
-    }
-
-    var pill = input.closest('div[class*="input"]') || input.parentElement;
-
-    var wrap = document.createElement('div');
-    wrap.className = 'ved-actions';
-    wrap.id = 'vedActions';
-    wrap.innerHTML =
-      '<button class="ved-action" data-action="voice"><span class="ico">🎙️</span>Live Voice Talk</button>' +
-      '<button class="ved-action" data-prompt="Ye message scam hai ya safe? \'Congratulations! You won 1,00,000 lottery. Send 5,000 processing fee now.\'"><span class="ico">🛡️</span>Scam Shield Demo</button>' +
-      '<button class="ved-action" data-prompt="Photo explain karo"><span class="ico">📷</span>Photo Analysis</button>' +
-      '<button class="ved-action" data-prompt="मराठीत बोला"><span class="ico">🗣️</span>मराठी Mode</button>';
-
-    pill.parentNode.insertBefore(wrap, pill);
-
-    // 🧠 SMART HIDE: chat box ko watch karo
-    function syncChips() {
-      var box = document.getElementById('chatMessages');
-      if (!box) return;
-      if (box.children.length > 0) wrap.classList.add('hide');
-      else wrap.classList.remove('hide');
-    }
-
-    var box = document.getElementById('chatMessages');
-    if (box && window.MutationObserver) {
-      var mo = new MutationObserver(syncChips);
-      mo.observe(box, { childList: true, subtree: true });
-    }
-    syncChips();
-
-    function triggerSend() {
-      var ids = ['sendBtn', 'sendButton', 'btnSend', 'chatSend'];
-      for (var i = 0; i < ids.length; i++) {
-        var b = document.getElementById(ids[i]);
-        if (b) { b.click(); return; }
-      }
-      var q = document.querySelector('button[class*="send"], .send-btn');
-      if (q) { q.click(); return; }
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-    }
-
-    wrap.addEventListener('click', function (e) {
-      var btn = e.target.closest('.ved-action');
-      if (!btn) return;
-
-      if (btn.dataset.action === 'voice') {
-        wrap.classList.add('hide');
-        if (window.VoiceMode && VoiceMode.open) VoiceMode.open();
-        return;
-      }
-
-      var text = btn.dataset.prompt || btn.textContent.trim();
-      input.value = text;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.focus();
-      setTimeout(triggerSend, 150);
-    });
-  }
-
-  if (document.readyState !== 'loading') boot();
-  else document.addEventListener('DOMContentLoaded', boot);
-})();
-</script>
-<!-- ═══ VED QUICK ACTIONS v3 — BULLETPROOF SMART HIDE ═══ -->
+<!-- ═══ VED CHIPS v6 — FINAL CLEAN VERSION ═══ -->
 <style>
   .ved-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:680px;margin:0 auto 16px;padding:0 16px;opacity:0;transform:translateY(10px);animation:vedIn .7s ease .25s forwards;transition:opacity .35s ease,transform .35s ease}
   @keyframes vedIn{to{opacity:1;transform:none}}
-  .ved-actions.hide{opacity:0 !important;transform:translateY(-8px) !important;pointer-events:none !important}
+  .ved-actions.hide{opacity:0 !important;visibility:hidden !important;pointer-events:none !important;animation:none !important;transform:translateY(-8px) !important}
   .ved-action{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,20,26,.38);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:rgba(255,255,255,.88);font-size:13px;font-weight:500;letter-spacing:.3px;cursor:pointer;transition:all .25s ease;box-shadow:0 2px 12px rgba(0,0,0,.18);font-family:inherit}
   .ved-action .ico{font-size:15px}
   .ved-action:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.28)}
@@ -630,22 +540,14 @@
 
 <script>
 (function(){
-  var TRIES=0;
-
-  function findInput(){
-    return document.getElementById('chatInput') ||
-           document.querySelector('input[placeholder*="Ask"]') ||
-           document.querySelector('input[type="text"]');
-  }
-
   function boot(){
-    var input=findInput();
-    if(!input){ if(TRIES++<60) setTimeout(boot,300); return; }
+    var input=document.getElementById('userInput');
+    if(!input){ setTimeout(boot,300); return; }
 
-    var purana=document.getElementById('vedActions');
-    if(purana) purana.remove();
+    document.querySelectorAll('.ved-actions').forEach(function(el){ el.remove(); });
 
-    var pill=input.closest('div[class*="input"]')||input.parentElement;
+    var pill=document.querySelector('.input-area');
+    if(!pill) return;
 
     var wrap=document.createElement('div');
     wrap.className='ved-actions';
@@ -658,39 +560,24 @@
 
     pill.parentNode.insertBefore(wrap,pill);
 
-    // 🧠 BULLETPROOF HIDE LOGIC
     function chatKhulaHai(){
-      if(document.querySelector('.user-message, .bot-message')) return true;
-      var boxes=document.querySelectorAll('#chatMessages, .chat-messages, #chatBox, #chatContainer');
-      for(var i=0;i<boxes.length;i++){
-        if(boxes[i] && boxes[i].children.length>0) return true;
-      }
-      return false;
+      if(document.body.classList.contains('chat-active')) return true;
+      var box=document.getElementById('chatMessages');
+      return !!(box && box.children.length>1);
     }
 
     function sync(){
-      if(chatKhulaHai()) wrap.classList.add('hide');
-      else wrap.classList.remove('hide');
+      var open=chatKhulaHai();
+      var w=document.getElementById('vedActions');
+      if(w) w.classList.toggle('hide',open);
     }
 
     sync();
+    setInterval(sync,500);
 
     if(window.MutationObserver){
-      new MutationObserver(sync).observe(document.body,{childList:true,subtree:true});
-    }
-    setInterval(sync,800);
-
-    input.addEventListener('keydown',function(e){ if(e.key==='Enter') setTimeout(sync,150); });
-
-    function triggerSend(){
-      var ids=['sendBtn','sendButton','btnSend','chatSend'];
-      for(var i=0;i<ids.length;i++){
-        var b=document.getElementById(ids[i]);
-        if(b){ b.click(); return; }
-      }
-      var q=document.querySelector('button[class*="send"], .send-btn');
-      if(q){ q.click(); return; }
-      input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true}));
+      var box=document.getElementById('chatMessages');
+      if(box) new MutationObserver(sync).observe(box,{childList:true});
     }
 
     wrap.addEventListener('click',function(e){
@@ -705,73 +592,13 @@
       input.value=text;
       input.dispatchEvent(new Event('input',{bubbles:true}));
       input.focus();
-      setTimeout(function(){ triggerSend(); sync(); },150);
+      var sendBtn=document.getElementById('sendBtn');
+      if(sendBtn) setTimeout(function(){ sendBtn.click(); sync(); },150);
     });
   }
 
   if(document.readyState!=='loading') boot();
   else document.addEventListener('DOMContentLoaded',boot);
-})();
-</script>
-<!-- ═══ V4 NUCLEAR HIDE — pill touch / Enter = chips gayab ═══ -->
-<script>
-(function(){
-  function hideChips(){
-    var w = document.getElementById('vedActions');
-    if(w){
-      w.style.opacity = '0';
-      w.style.visibility = 'hidden';
-      w.style.pointerEvents = 'none';
-      w.style.transform = 'translateY(-8px)';
-    }
-  }
-  function bind(){
-    var input = document.getElementById('chatInput') || document.querySelector('input[type="text"]');
-    if(!input){ setTimeout(bind, 400); return; }
-    var pill = input.closest('div[class*="input"]') || input.parentElement;
-
-    // Enter = send = chips gayab
-    document.addEventListener('keydown', function(e){
-      if(e.key === 'Enter') setTimeout(hideChips, 120);
-    });
-
-    // pill ke andar koi bhi click (send / mic / camera) = chips gayab
-    document.addEventListener('click', function(e){
-      if(pill.contains(e.target)) setTimeout(hideChips, 120);
-    }, true);
-  }
-  if(document.readyState !== 'loading') bind();
-  else document.addEventListener('DOMContentLoaded', bind);
-})();
-</script>
-<!-- ═══ V5 FINAL — ANIMATION KILLER ═══ -->
-<style>
-  .ved-actions.hide{
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    animation: none !important;
-    transform: translateY(-8px) !important;
-  }
-</style>
-<script>
-(function(){
-  function chatKhulaHai(){
-    if(document.querySelector('.user-message, .bot-message')) return true;
-    var b=document.getElementById('chatMessages');
-    return !!(b && b.children.length>0);
-  }
-  function sync(){
-    var open=chatKhulaHai();
-    document.querySelectorAll('.ved-actions').forEach(function(w){
-      w.classList.toggle('hide', open);
-    });
-  }
-  setInterval(sync,600);
-  if(window.MutationObserver){
-    new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});
-  }
-  document.addEventListener('keydown',function(e){ if(e.key==='Enter') setTimeout(sync,120); });
 })();
 </script>
 </body>
