@@ -744,5 +744,35 @@
   else document.addEventListener('DOMContentLoaded', bind);
 })();
 </script>
+<!-- ═══ V5 FINAL — ANIMATION KILLER ═══ -->
+<style>
+  .ved-actions.hide{
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    animation: none !important;
+    transform: translateY(-8px) !important;
+  }
+</style>
+<script>
+(function(){
+  function chatKhulaHai(){
+    if(document.querySelector('.user-message, .bot-message')) return true;
+    var b=document.getElementById('chatMessages');
+    return !!(b && b.children.length>0);
+  }
+  function sync(){
+    var open=chatKhulaHai();
+    document.querySelectorAll('.ved-actions').forEach(function(w){
+      w.classList.toggle('hide', open);
+    });
+  }
+  setInterval(sync,600);
+  if(window.MutationObserver){
+    new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});
+  }
+  document.addEventListener('keydown',function(e){ if(e.key==='Enter') setTimeout(sync,120); });
+})();
+</script>
 </body>
 </html>
