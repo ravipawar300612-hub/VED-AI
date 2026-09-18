@@ -591,6 +591,113 @@ try { cropModule = require("./crop"); } catch (e) {}
 // ===============================
 // AUTH + MISSIONS + START SERVER
 // ===============================
+// ===============================
+// 🌊 STREAMING CHAT ROUTE (Phase 1 — "Zinda AI")
+// ===============================
+function detectStreamLang(t) {
+    if (/[\u0900-\u097F]/.test(t)) {
+        if (/(आहे|आहात|नाही|काय|कसे|झाले|मला|तुम्ही|होय|करू|हवी|पाहिजे)/.test(t)) return "marathi";
+        return "hindi";
+    }
+    var l = String(t).toLowerCase();
+    if (/\b(ahe|aahet|nahi|kay|kasa|zala|zali|mala|tumhi|hoy|karu|havay|pahije)\b/.test(l)) return "marathi";
+    if (/\b(kya|hai|ho|kaise|nahi|kab|kahan|kaun|kyun|accha|theek|haan|matlab|yaar|bhai|didi|namaste)\b/.test(l)) return "hindi";
+    return "english";
+}
+
+app.post("/chat/stream", async (req, res) => {
+    try {
+        const message = validateMessage(req.body.message);
+        if (!message) return res.status(400).json({ error: "Invalid message" });
+
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        if (res.flushHeaders) res.flushHeaders();
+
+        const send = (obj) => res.write("data: " + JSON.stringify(obj) + "\n\n");
+
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", message]);
+        conversationHistory.push({ role: "user", parts: [{ text: message }] });
+        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
+
+        const memoryFacts = await new Promise((resolve) => {
+            db.all("SELECT fact FROM memories ORDER BY id ASC", [], (err, rows) => resolve(err ? [] : rows.map(r => r.fact)));
+        });
+        const memoryBlock = memoryFacts.length ? "\n\nImportant facts about user:\n" + memoryFacts.map(f => "- " + f).join("\n") + "\n" : "";
+
+        const lang = detectStreamLang(message);
+        const langLine = lang === "hindi"
+            ? "\nSTRICT LANGUAGE RULE: Reply ONLY in simple Hindi. Devanagari input = Devanagari reply, Hinglish input = Hinglish reply. NEVER English."
+            : lang === "marathi"
+            ? "\nSTRICT LANGUAGE RULE: Reply ONLY in simple Marathi (Devanagari). NEVER English or Hindi."
+            : "\nLANGUAGE RULE: Reply in simple English.";
+
+        const systemPrompt = `
+You are VED AI, a warm, professional AI assistant created by Sayali P. R. Pawar.
+Never say you are Gemini.
+IMPORTANT RULES:
+- Keep responses SHORT and conversational (1-3 sentences max)
+- Reply like a smart, caring friend who is also professional
+- Always address the user respectfully ("aap" style, never "tu")
+- Never use markdown (*, #, _, backticks)
+- Write exactly how you'd speak naturally
+- For current facts (2024-2026), use Google Search before answering
+${langLine}
+${memoryBlock}`;
+
+        const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory];
+
+        let fullText = "";
+        let groundingMeta = null;
+        let started = false;
+
+        for (const model of MODEL_CHAIN) {
+            try {
+                const stream = await ai.models.generateContentStream({
+                    model: model,
+                    contents: contents,
+                    config: { tools: [{ googleSearch: {} }] }
+                });
+                for await (const chunk of stream) {
+                    const piece = chunk.text || "";
+                    if (piece) {
+                        fullText += piece;
+                        send({ t: piece });
+                        started = true;
+                    }
+                    const gm = chunk.candidates && chunk.candidates[0] && chunk.candidates[0].groundingMetadata;
+                    if (gm) groundingMeta = gm;
+                }
+                break;
+            } catch (err) {
+                if (started) throw err;
+                const em = String(err.message || "").toLowerCase();
+                if (em.includes("quota") || em.includes("429") || em.includes("rate") || em.includes("limit")) continue;
+                continue;
+            }
+        }
+
+        if (!fullText) fullText = "Maaf kijiye, abhi jawab nahi de paya. Dobara prayas karein. 🙏";
+
+        let sources = [];
+        if (groundingMeta && groundingMeta.groundingChunks) {
+            sources = groundingMeta.groundingChunks.filter(c => c.web).slice(0, 2).map(c => ({ title: c.web.title || "Source", uri: c.web.uri }));
+        }
+
+        send({ done: true, sources: sources });
+
+        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", fullText]);
+        conversationHistory.push({ role: "model", parts: [{ text: fullText }] });
+        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
+
+        res.end();
+    } catch (error) {
+        console.error("❌ Stream Error:", error);
+        try { res.write("data: " + JSON.stringify({ done: true, error: true }) + "\n\n"); } catch (e) {}
+        res.end();
+    }
+});
 setupAuth(app);
 app.use('/api/missions', require('./routes/missions')());
 
