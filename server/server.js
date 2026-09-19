@@ -353,7 +353,7 @@ IMPORTANT RULES:
 - Reply like a smart, caring friend who is also professional
 - Always address the user respectfully (use "aap" style respect, never "tu")
 - Make EVERY user feel comfortable, respected and welcome
-- Use simple clean markdown when helpful: bullet lists (- item), **bold** for important words, and code blocks for code; keep responses short
+- Never use markdown (*, #, _, backticks)
 - Write exactly how you'd speak naturally
 
 CRITICAL ACCURACY RULE:
@@ -474,7 +474,7 @@ app.post("/document", async (req, res) => {
 app.post("/blacklist", (req, res) => {
     try {
         const message = validateMessage(req.body.message);
-        if (!message) return res.status(400).json({ saved: 0, error: "Invalid message" });
+        if (!message) return res.json({ saved: 0, error: "Invalid message" });
         const patterns = extractPatterns(message);
         const toSave = patterns.length ? patterns : [message.trim().slice(0, 120)];
         let saved = 0;
@@ -589,10 +589,7 @@ let cropModule = null;
 try { cropModule = require("./crop"); } catch (e) {}
 
 // ===============================
-// AUTH + MISSIONS + START SERVER
-// ===============================
-// ===============================
-// 🌊 STREAMING CHAT ROUTE (Phase 1 — "Zinda AI")
+// 🌊 STREAMING CHAT ROUTE (Phase 1 — "Zinda AI" + Phase 2 markdown + RESCUE MODE)
 // ===============================
 function detectStreamLang(t) {
     if (/[\u0900-\u097F]/.test(t)) {
@@ -640,7 +637,7 @@ IMPORTANT RULES:
 - Keep responses SHORT and conversational (1-3 sentences max)
 - Reply like a smart, caring friend who is also professional
 - Always address the user respectfully ("aap" style, never "tu")
-- Never use markdown (*, #, _, backticks)
+- Use simple clean markdown when helpful: bullet lists (- item), **bold** for important words, and code blocks for code; keep responses short
 - Write exactly how you'd speak naturally
 - For current facts (2024-2026), use Google Search before answering
 ${langLine}
@@ -671,10 +668,27 @@ ${memoryBlock}`;
                 }
                 break;
             } catch (err) {
+                console.warn("⚠️ Stream model failed:", model, "-", err.message);
                 if (started) throw err;
-                const em = String(err.message || "").toLowerCase();
-                if (em.includes("quota") || em.includes("429") || em.includes("rate") || em.includes("limit")) continue;
                 continue;
+            }
+        }
+
+        // 🆘 RESCUE MODE: streaming khaali raha to non-stream se jawab lao
+        if (!fullText) {
+            try {
+                console.log("🆘 Stream empty — non-stream fallback...");
+                const gen = await generateWithFallback(contents, true);
+                fullText = (gen.result.candidates[0].content.parts[0].text) || "";
+                if (gen.result.candidates[0].groundingMetadata) groundingMeta = gen.result.candidates[0].groundingMetadata;
+                var pos = 0;
+                while (pos < fullText.length) {
+                    send({ t: fullText.slice(pos, pos + 24) });
+                    pos += 24;
+                    await new Promise(r => setTimeout(r, 35));
+                }
+            } catch (e) {
+                console.warn("⚠️ Non-stream fallback bhi failed:", e.message);
             }
         }
 
@@ -698,6 +712,10 @@ ${memoryBlock}`;
         res.end();
     }
 });
+
+// ===============================
+// AUTH + MISSIONS + START SERVER
+// ===============================
 setupAuth(app);
 app.use('/api/missions', require('./routes/missions')());
 
