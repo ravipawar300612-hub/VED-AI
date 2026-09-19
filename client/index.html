@@ -702,7 +702,7 @@
   }, true);
 })();
 </script>
-<!-- ═══ PHASE 1 — STREAMING "ZINDA AI" v2 ═══ -->
+<!-- ═══ PHASE 2 — MARKDOWN + COPY/REGENERATE ═══ -->
 <style>
   .ved-dots{display:inline-flex;gap:5px;align-items:center;padding:4px 2px}
   .ved-dots span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.55);animation:vedDot 1.2s infinite ease-in-out}
@@ -711,33 +711,91 @@
   @keyframes vedDot{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
   .bot-message .ved-src{display:block;margin-top:8px;font-size:12px;opacity:.75}
   .bot-message .ved-src a{color:#8ab4ff;text-decoration:none}
+  .bot-message .ved-pre{background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;overflow-x:auto;margin:8px 0;font-size:13px;line-height:1.5}
+  .bot-message code.ved-ic{background:rgba(255,255,255,.12);padding:1px 6px;border-radius:6px;font-size:.9em}
+  .bot-message ul,.bot-message ol{margin:6px 0 6px 20px;padding:0}
+  .bot-message li{margin:3px 0}
+  .bot-message .ved-h1{font-size:1.15em;font-weight:700;margin:8px 0 4px}
+  .bot-message .ved-h2{font-size:1.08em;font-weight:700;margin:8px 0 4px}
+  .bot-message .ved-h3{font-size:1em;font-weight:600;margin:6px 0 3px}
+  .bot-message p{margin:4px 0}
+  .ved-msg-actions{display:flex;gap:8px;margin-top:8px}
+  .ved-act{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.75);font-size:11.5px;padding:4px 10px;border-radius:999px;cursor:pointer;transition:all .2s;font-family:inherit}
+  .ved-act:hover{background:rgba(255,255,255,.16);color:#fff}
 </style>
 <script>
 (function(){
-  window.__vedStreamReady = true;
+  window.__vedStreamReady = 2;
   function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
   function scrollBottom(){ var b=document.getElementById('chatMessages'); if(b) b.scrollTop=b.scrollHeight; }
   function addMsg(cls, html){
     var b=document.getElementById('chatMessages');
     var d=document.createElement('div');
-    d.className=cls;
-    d.innerHTML=html;
-    b.appendChild(d);
-    scrollBottom();
+    d.className=cls; d.innerHTML=html;
+    b.appendChild(d); scrollBottom();
     return d;
   }
 
-  async function streamChat(text){
+  function mdRender(src){
+    var blocks=[];
+    var s=src.replace(/```([\s\S]*?)```/g, function(m, code){
+      blocks.push(code.replace(/^\n+|\n+$/g,''));
+      return '\u0000CODE'+(blocks.length-1)+'\u0000';
+    });
+    s=esc(s);
+    s=s.replace(/`([^`\n]+)`/g, function(m,c){ return '<code class="ved-ic">'+c+'</code>'; });
+    s=s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s=s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+    s=s.replace(/^###\s?(.+)$/gm, '<div class="ved-h3">$1</div>');
+    s=s.replace(/^##\s?(.+)$/gm, '<div class="ved-h2">$1</div>');
+    s=s.replace(/^#\s?(.+)$/gm, '<div class="ved-h1">$1</div>');
+    s=s.replace(/(^|\n)((?:[-*]\s.+(?:\n|$))+)/g, function(m, pre, list){
+      var items=list.trim().split('\n').map(function(l){ return '<li>'+l.replace(/^[-*]\s/,'')+'</li>'; }).join('');
+      return pre+'<ul>'+items+'</ul>';
+    });
+    s=s.replace(/(^|\n)((?:\d+\.\s.+(?:\n|$))+)/g, function(m, pre, list){
+      var items=list.trim().split('\n').map(function(l){ return '<li>'+l.replace(/^\d+\.\s/,'')+'</li>'; }).join('');
+      return pre+'<ol>'+items+'</ol>';
+    });
+    s=s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    s=s.replace(/\n{2,}/g, '</p><p>');
+    s=s.replace(/\n/g, '<br>');
+    s='<p>'+s+'</p>';
+    s=s.replace(/<p><\/p>/g,'');
+    s=s.replace(/\u0000CODE(\d+)\u0000/g, function(m,i){
+      return '<pre class="ved-pre"><code>'+esc(blocks[+i])+'</code></pre>';
+    });
+    return s;
+  }
+
+  function addActions(bot){
+    if(bot.querySelector('.ved-msg-actions')) return;
+    var bar=document.createElement('div');
+    bar.className='ved-msg-actions';
+    bar.innerHTML='<button class="ved-act" data-act="copy" type="button">📋 Copy</button><button class="ved-act" data-act="regen" type="button">🔄 Regenerate</button>';
+    bot.appendChild(bar);
+  }
+
+  async function streamChat(text, existingBot){
     document.body.classList.add('chat-active');
-    addMsg('user-message', esc(text));
-    var bot=addMsg('bot-message','<span class="ved-dots"><span></span><span></span><span></span></span>');
-    var inp=document.getElementById('userInput'); if(inp) inp.value='';
+    var bot;
+    if(existingBot){
+      bot=existingBot;
+      bot.innerHTML='<span class="ved-dots"><span></span><span></span><span></span></span>';
+      bot.dataset.raw='';
+    } else {
+      addMsg('user-message', esc(text));
+      bot=addMsg('bot-message','<span class="ved-dots"><span></span><span></span><span></span></span>');
+    }
+    bot.dataset.prompt=text;
+    var inp=document.getElementById('userInput'); if(inp && !existingBot) inp.value='';
+    var acc='';
     try{
       var res=await fetch('/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});
       if(!res.ok || !res.body) throw new Error('bad response');
       var reader=res.body.getReader();
       var dec=new TextDecoder();
-      var buf=''; var acc=''; var first=false;
+      var buf=''; var first=false;
       while(true){
         var r=await reader.read();
         if(r.done) break;
@@ -754,7 +812,7 @@
             bot.textContent=acc;
             scrollBottom();
           } else if(obj.done){
-            if(obj.error && !first){ bot.innerHTML=''; bot.textContent='Kuch gadbad ho gayi. Dobara prayas karein. 🙏'; }
+            if(obj.error && !first){ bot.innerHTML=''; acc='Kuch gadbad ho gayi. Dobara prayas karein. 🙏'; bot.textContent=acc; }
             if(obj.sources && obj.sources.length){
               var s=document.createElement('span');
               s.className='ved-src';
@@ -764,10 +822,16 @@
           }
         }
       }
-      if(!first && !acc){ bot.textContent='Kuch gadbad ho gayi. Dobara prayas karein. 🙏'; }
+      if(!first && !acc){ acc='Kuch gadbad ho gayi. Dobara prayas karein. 🙏'; bot.textContent=acc; }
     }catch(e){
-      bot.textContent='Internet mein dikkat hai. Dobara prayas karein. 🙏';
+      acc=acc||'Internet mein dikkat hai. Dobara prayas karein. 🙏';
+      bot.textContent=acc;
     }
+    if(acc){
+      bot.innerHTML=mdRender(acc);
+      bot.dataset.raw=acc;
+    }
+    addActions(bot);
     scrollBottom();
   }
 
@@ -778,7 +842,29 @@
 
   document.addEventListener('click', function(e){
     var t=e.target;
-    if(!t || !t.closest || !t.closest('#sendBtn')) return;
+    if(!t || !t.closest) return;
+    var act=t.closest('.ved-act');
+    if(act){
+      var bubble=act.closest('.bot-message');
+      if(!bubble) return;
+      if(act.dataset.act==='copy'){
+        var raw=bubble.dataset.raw||bubble.textContent;
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(raw).then(function(){
+            act.textContent='✅ Copied!';
+            setTimeout(function(){ act.textContent='📋 Copy'; },1500);
+          });
+        }
+        return;
+      }
+      if(act.dataset.act==='regen'){
+        var prompt=bubble.dataset.prompt;
+        if(prompt) streamChat(prompt, bubble);
+        return;
+      }
+      return;
+    }
+    if(!t.closest('#sendBtn')) return;
     if(pendingAttachment()) return;
     var inp=document.getElementById('userInput');
     var text=inp ? inp.value.trim() : '';
