@@ -1,6 +1,6 @@
 // ==========================================
-// VED AI — VOICE MODE v2 (TURBO MODE)
-// Streaming + Interruption Support
+// VED AI — VOICE MODE v2 (TURBO + PROFESSIONAL)
+// Streaming + Interruption + Silent debug
 // Founder: Sayali P. R. Pawar
 // ==========================================
 
@@ -12,7 +12,9 @@ const VoiceMode = (function () {
     let interimTimeout = null;
     let isSpeaking = false;
 
+    // PROFESSIONAL MODE: sirf errors/warnings dikhao, baaki console mein
     function toast(msg, duration = 3000) {
+        if (!/^(❌|⚠️)/.test(msg)) { console.log("[VED]", msg); return; }
         const t = document.createElement("div");
         t.textContent = msg;
         t.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.25);";
@@ -35,11 +37,9 @@ const VoiceMode = (function () {
             close();
         });
 
-        // Set up interrupt callback
         if (SpeechEngine && SpeechEngine.setInterruptCallback) {
             SpeechEngine.setInterruptCallback(() => {
                 console.log("🛑 User interrupted, stopping speech");
-                toast("🛑 Ruk gaya!", 1500);
                 isSpeaking = false;
                 setTimeout(listenStep, 500);
             });
@@ -80,7 +80,6 @@ const VoiceMode = (function () {
         waveBars.forEach(bar => bar.style.height = "6px");
     }
 
-    // Process text with STREAMING (Fast response!)
     async function processSpokenText(text) {
         if (!text || text.trim().length === 0) {
             toast("⚠️ Kuch suna nahi, dobara boliye");
@@ -89,12 +88,10 @@ const VoiceMode = (function () {
         }
 
         console.log("✅ Processing:", text);
-        toast("📤 Bhej raha hu: " + text, 2000);
 
         setState("thinking");
         resetWave();
 
-        // Add user message to chat
         const chatBox = document.getElementById("chatMessages");
         if (chatBox) {
             const userMsg = document.createElement("div");
@@ -105,7 +102,6 @@ const VoiceMode = (function () {
         }
 
         try {
-            // Use STREAMING endpoint for fast response
             const response = await fetch("/chat/stream", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -136,16 +132,12 @@ const VoiceMode = (function () {
 
                         if (data.t) {
                             fullReply += data.t;
-
-                            // On first chunk, switch to speaking mode
                             if (firstChunk && isOpen && !isExiting) {
                                 firstChunk = false;
-                                toast("🔊 Bolne laga...", 1000);
                                 setState("speaking");
                                 isSpeaking = true;
                             }
                         } else if (data.done) {
-                            // Add bot message to chat
                             if (chatBox && fullReply) {
                                 const botMsg = document.createElement("div");
                                 botMsg.className = "bot-message";
@@ -153,15 +145,11 @@ const VoiceMode = (function () {
                                 chatBox.appendChild(botMsg);
                                 chatBox.scrollTop = chatBox.scrollHeight;
                             }
-
-                            // Start speaking the full reply
                             if (isOpen && !isExiting && fullReply) {
                                 speakStep(fullReply);
                             }
                         }
-                    } catch (e) {
-                        // Ignore parse errors
-                    }
+                    } catch (e) {}
                 }
             }
         } catch (err) {
@@ -187,7 +175,6 @@ const VoiceMode = (function () {
         setState("idle");
         if (transcriptEl) transcriptEl.textContent = "";
 
-        toast("🎙️ Boliye, main sun raha hu...", 2000);
         setTimeout(() => {
             if (isOpen && !isExiting) listenStep();
         }, 500);
@@ -226,7 +213,6 @@ const VoiceMode = (function () {
                 if (interimTimeout) clearTimeout(interimTimeout);
                 interimTimeout = setTimeout(() => {
                     if (lastInterimText && isOpen && !isExiting) {
-                        console.log("⏰ Timeout — processing");
                         processSpokenText(lastInterimText);
                     }
                 }, 3000);
@@ -243,13 +229,11 @@ const VoiceMode = (function () {
                 if (isExiting || !isOpen) return;
                 if (transcriptEl) transcriptEl.textContent = text;
 
-                toast("✅ Sun liya: " + text, 1500);
                 await processSpokenText(text);
             },
             onEnd: () => {
                 console.log("🔚 Recognition ended");
                 if (lastInterimText && isOpen && !isExiting && overlay && overlay.dataset.state === "listening") {
-                    console.log("⏰ End without final — processing interim");
                     processSpokenText(lastInterimText);
                 } else if (isOpen && !isExiting) {
                     setTimeout(listenStep, 400);
