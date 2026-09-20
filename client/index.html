@@ -787,5 +787,60 @@
     mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.5' y2='16.5'/></svg>") center/contain no-repeat;
   }
 </style>
+<!-- ═══ VED DESIGN SYSTEM v3 — PROFESSIONAL RESTRAINT ═══ -->
+<style>
+  /* RULE 1: Ek hi font family, tight hierarchy */
+  h1,h2,h3,.sb-wordmark{ font-family:'Inter',sans-serif !important; letter-spacing:-0.01em !important; }
+
+  /* RULE 2: Landing = clean centered greeting, no resume line */
+  .container h1{
+    font-size:26px !important; font-weight:600 !important; letter-spacing:-0.02em !important;
+    color:#ececec !important; margin:0 0 6px !important; text-align:center !important;
+  }
+  .container .tagline{
+    font-size:15px !important; color:#9aa4b2 !important; font-weight:400 !important;
+    margin:0 0 22px !important; text-align:center !important;
+  }
+  .container .subtitle{ display:none !important; }
+
+  /* RULE 3: Chips = clean TEXT pills (emoji hidden) */
+  .ved-action .ico{ display:none !important; }
+  .ved-action{
+    background:#171a1e !important; border:1px solid rgba(255,255,255,.10) !important;
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+    color:#d7dbe0 !important; font-size:13.5px !important; font-weight:500 !important;
+    padding:9px 16px !important; box-shadow:none !important; transform:none !important;
+  }
+  .ved-action:hover{ background:#1f242a !important; border-color:rgba(255,255,255,.18) !important; transform:none !important; }
+
+  /* RULE 4: Input = solid surface, no heavy glass */
+  .input-area{
+    background:#171a1e !important;
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+    border:1px solid rgba(255,255,255,.10) !important;
+    box-shadow:0 1px 2px rgba(0,0,0,.4) !important;
+  }
+  .input-area:focus-within{ border-color:rgba(255,255,255,.22) !important; }
+
+  /* RULE 5: EK accent (send button), solid — no rainbow */
+  #sendBtn{ background:#ee2b5b !important; }
+  #sendBtn:hover{ filter:brightness(1.08) !important; }
+
+  /* RULE 6: Sidebar = calm, flat, quiet */
+  .sidebar{ background:#101317 !important; border-right:1px solid rgba(255,255,255,.06) !important; }
+  #newChatBtn{
+    background:transparent !important; border:1px solid rgba(255,255,255,.12) !important;
+    border-radius:10px !important; color:#ececec !important; font-weight:500 !important;
+  }
+  #newChatBtn:hover{ background:#1a1e24 !important; }
+  #sidebarSearchInput{
+    background:#171a1e !important; border:1px solid rgba(255,255,255,.08) !important;
+    border-radius:10px !important; color:#d7dbe0 !important;
+  }
+  .sb-footer{ color:rgba(255,255,255,.35) !important; font-size:11.5px !important; }
+
+  /* RULE 7: User bubble = quiet, not loud */
+  .user-message{ background:#232830 !important; }
+</style>
 </body>
 </html>
