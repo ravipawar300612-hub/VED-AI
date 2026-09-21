@@ -1,277 +1,130 @@
 // ==========================================
-// VED AI — SIDEBAR CONTROLLER (NEW CHAT FIXED)
-// Handles: collapse/expand, search filter,
-// time-grouped chat list, rename/delete menu.
-// Talks to script_new.js only through the
-// onSelect / onDelete callbacks below —
-// it doesn't touch chats{} directly.
+// VED AI — SIDEBAR v2 (CHAT HISTORY + SEARCH)
+// Founder: Sayali P. R. Pawar
 // ==========================================
+(function () {
+    'use strict';
 
-const Sidebar = (function () {
+    const groupsEl = document.getElementById('sidebarGroups');
+    const searchInput = document.getElementById('sidebarSearchInput');
+    const newChatBtn = document.getElementById('newChatBtn');
 
-    let collapsed = false;
-    let activeId = null;
-    let selectCallback = null;
-    let deleteCallback = null;
-    let openMenuId = null;
+    let allChats = [];
+    let filteredChats = [];
 
-    // Each entry: { id, title, timestamp }
-    let entries = [];
-
-    let root, toggleBtn, searchInput, groupsEl, newChatBtn;
-
-    function init() {
-
-        root = document.querySelector(".sidebar");
-        toggleBtn = document.getElementById("sidebarCollapseBtn");
-        searchInput = document.getElementById("sidebarSearchInput");
-        groupsEl = document.getElementById("sidebarGroups");
-        newChatBtn = document.getElementById("newChatBtn");
-
-        toggleBtn.addEventListener("click", toggleCollapse);
-        searchInput.addEventListener("input", () => render(searchInput.value));
-        
-        // ✅ NEW CHAT BUTTON FIX
-        if (newChatBtn) {
-            newChatBtn.addEventListener("click", handleNewChat);
-        }
-
-        // Close any open context menu when clicking elsewhere
-        document.addEventListener("click", (e) => {
-            if (openMenuId && !e.target.closest(".chat-row-menu") && !e.target.closest(".chat-row-kebab")) {
-                closeMenu();
-            }
-        });
-
-        render();
-    }
-
-    // ✅ NEW CHAT HANDLER
-    function handleNewChat() {
-        // Clear chat messages
-        const chatBox = document.getElementById("chatMessages");
-        if (chatBox) {
-            chatBox.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
-        }
-        
-        // Clear input
-        const userInput = document.getElementById("userInput");
-        if (userInput) userInput.value = "";
-        
-        // Reset UI state
-        document.body.classList.remove("chat-active");
-        
-        // Close sidebar on mobile
-        if (window.innerWidth <= 768) {
-            const sidebar = document.querySelector(".sidebar");
-            const backdrop = document.getElementById("mobileBackdrop");
-            if (sidebar) {
-                sidebar.style.display = "";
-                sidebar.style.transform = "";
-                sidebar.style.position = "";
-                sidebar.style.zIndex = "";
-            }
-            if (backdrop) {
-                backdrop.style.display = "";
-                backdrop.style.position = "";
-            }
-        }
-        
-        // Show toast
-        const toast = document.createElement("div");
-        toast.textContent = "✅ Nayi chat shuru!";
-        toast.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:2147483647;border:1px solid rgba(255,255,255,0.25);";
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2500);
-    }
-
-    function toggleCollapse() {
-        collapsed = !collapsed;
-        root.classList.toggle("collapsed", collapsed);
-    }
-
-    function timeGroup(ts) {
-
+    function formatDate(date) {
         const now = new Date();
-        const d = new Date(ts);
-
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfEntry = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-        const diffDays = Math.round((startOfToday - startOfEntry) / 86400000);
-
-        if (diffDays <= 0) return "Today";
-        if (diffDays === 1) return "Yesterday";
-        if (diffDays <= 7) return "Previous 7 Days";
-        return "Older";
-
+        const d = new Date(date);
+        const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+        if (diff === 0) return 'Today';
+        if (diff === 1) return 'Yesterday';
+        if (diff < 7) return 'Last 7 days';
+        if (diff < 30) return 'Last 30 days';
+        return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     }
 
-    // Called from script_new.js's saveHistory() with the chat's id + first message
-    function addChat(id, title) {
-
-        entries = entries.filter(e => e.id !== id);
-        entries.unshift({
-            id,
-            title: title.slice(0, 60),
-            timestamp: Number(id) || Date.now()
+    function groupByDate(chats) {
+        const groups = {};
+        chats.forEach(function (chat) {
+            const group = formatDate(chat.timestamp);
+            if (!groups[group]) groups[group] = [];
+            groups[group].push(chat);
         });
-
-        setActive(id);
-        render(searchInput.value);
-
+        return groups;
     }
 
-    function renameChat(id, newTitle) {
-        const entry = entries.find(e => e.id === id);
-        if (entry) entry.title = newTitle.slice(0, 60);
-        render(searchInput.value);
-    }
-
-    function removeChat(id) {
-        entries = entries.filter(e => e.id !== id);
-        render(searchInput.value);
-    }
-
-    function setActive(id) {
-        activeId = id;
-        render(searchInput ? searchInput.value : "");
-    }
-
-    function closeMenu() {
-        const openEl = document.querySelector(".chat-row-menu");
-        if (openEl) openEl.remove();
-        document.querySelectorAll(".chat-row-kebab.menu-open")
-            .forEach(el => el.classList.remove("menu-open"));
-        openMenuId = null;
-    }
-
-    function openMenu(id, kebabEl, rowEl) {
-
-        closeMenu();
-        openMenuId = id;
-        kebabEl.classList.add("menu-open");
-
-        const menu = document.createElement("div");
-        menu.className = "chat-row-menu";
-        menu.innerHTML = `
-            <button type="button" data-action="rename">Rename</button>
-            <button type="button" data-action="delete" class="danger">Delete</button>
-        `;
-
-        menu.addEventListener("click", (e) => {
-
-            const action = e.target.dataset.action;
-            if (!action) return;
-
-            if (action === "rename") {
-                const entry = entries.find(en => en.id === id);
-                const next = prompt("Rename conversation", entry ? entry.title : "");
-                if (next && next.trim()) renameChat(id, next.trim());
-            }
-
-            if (action === "delete") {
-                if (confirm("Delete this conversation? This can't be undone.")) {
-                    removeChat(id);
-                    if (deleteCallback) deleteCallback(id);
-                }
-            }
-
-            closeMenu();
-
-        });
-
-        rowEl.appendChild(menu);
-        requestAnimationFrame(() => menu.classList.add("open"));
-
-    }
-
-    function render(filter = "") {
-
-        groupsEl.innerHTML = "";
-
-        const q = filter.trim().toLowerCase();
-        const filtered = q
-            ? entries.filter(e => e.title.toLowerCase().includes(q))
-            : entries;
-
-        if (filtered.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "sidebar-empty";
-            empty.textContent = q ? "No matches." : "No conversations yet.";
-            groupsEl.appendChild(empty);
+    function renderGroups(chats) {
+        if (!groupsEl) return;
+        groupsEl.innerHTML = '';
+        if (chats.length === 0) {
+            groupsEl.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,.4);font-size:13px;">No chats yet</div>';
             return;
         }
 
-        const order = ["Today", "Yesterday", "Previous 7 Days", "Older"];
-        const buckets = {};
+        const grouped = groupByDate(chats);
+        const order = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days'];
+        const otherKeys = Object.keys(grouped).filter(function (k) { return order.indexOf(k) === -1; }).sort();
+        const keys = order.filter(function (k) { return grouped[k]; }).concat(otherKeys);
 
-        filtered.forEach(e => {
-            const g = timeGroup(e.timestamp);
-            if (!buckets[g]) buckets[g] = [];
-            buckets[g].push(e);
-        });
-
-        order.forEach(groupName => {
-
-            const items = buckets[groupName];
-            if (!items || items.length === 0) return;
-
-            const groupEl = document.createElement("div");
-            groupEl.className = "chat-group";
-
-            const label = document.createElement("div");
-            label.className = "chat-group-label";
-            label.textContent = groupName;
-            groupEl.appendChild(label);
-
-            items.forEach(entry => {
-
-                const row = document.createElement("div");
-                row.className = "chat-row" + (entry.id === activeId ? " active" : "");
-                row.dataset.chatId = entry.id;
-
-                const title = document.createElement("span");
-                title.className = "chat-row-title";
-                title.textContent = entry.title;
-                row.appendChild(title);
-
-                const kebab = document.createElement("button");
-                kebab.type = "button";
-                kebab.className = "chat-row-kebab";
-                kebab.setAttribute("aria-label", "Conversation options");
-                kebab.textContent = "\u22EF";
-                kebab.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    openMenu(entry.id, kebab, row);
+        keys.forEach(function (key) {
+            const section = document.createElement('div');
+            section.className = 'sb-group';
+            section.innerHTML = '<div class="sb-group-label">' + key + '</div>';
+            grouped[key].forEach(function (chat) {
+                const item = document.createElement('div');
+                item.className = 'sb-chat-item';
+                item.textContent = chat.firstMessage || 'Chat';
+                item.addEventListener('click', function () {
+                    loadChat(chat.id);
                 });
-                row.appendChild(kebab);
-
-                row.addEventListener("click", () => {
-                    setActive(entry.id);
-                    if (selectCallback) selectCallback(entry.id);
-                });
-
-                groupEl.appendChild(row);
-
+                section.appendChild(item);
             });
-
-            groupsEl.appendChild(groupEl);
-
+            groupsEl.appendChild(section);
         });
-
     }
 
-    return {
-        init,
-        addChat,
-        removeChat,
-        renameChat,
-        setActive,
-        onSelect: (cb) => { selectCallback = cb; },
-        onDelete: (cb) => { deleteCallback = cb }
-    };
+    function loadChat(chatId) {
+        // TODO: Load specific chat (for now, just alert)
+        alert('Loading chat: ' + chatId);
+    }
 
+    function fetchHistory() {
+        fetch('/history')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data && data.history) {
+                    // Group conversations (every 2 messages = 1 chat)
+                    const chats = [];
+                    let currentChat = null;
+                    data.history.forEach(function (msg, idx) {
+                        if (msg.role === 'user') {
+                            currentChat = {
+                                id: idx,
+                                firstMessage: msg.message.slice(0, 40),
+                                timestamp: msg.timestamp || new Date(),
+                                messages: []
+                            };
+                            chats.push(currentChat);
+                        }
+                        if (currentChat) {
+                            currentChat.messages.push(msg);
+                        }
+                    });
+                    allChats = chats.reverse(); // newest first
+                    filteredChats = allChats;
+                    renderGroups(filteredChats);
+                }
+            })
+            .catch(function (err) {
+                console.warn('Failed to load history:', err);
+            });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const q = searchInput.value.toLowerCase();
+            if (!q) {
+                filteredChats = allChats;
+            } else {
+                filteredChats = allChats.filter(function (c) {
+                    return c.firstMessage.toLowerCase().indexOf(q) !== -1;
+                });
+            }
+            renderGroups(filteredChats);
+        });
+    }
+
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', function () {
+            // Clear chat box
+            const box = document.getElementById('chatMessages');
+            if (box) box.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
+            const inp = document.getElementById('userInput');
+            if (inp) inp.value = '';
+            document.body.classList.remove('chat-active');
+        });
+    }
+
+    // Load on init
+    setTimeout(fetchHistory, 500);
 })();
-
-document.addEventListener("DOMContentLoaded", Sidebar.init);
