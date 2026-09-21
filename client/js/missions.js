@@ -1,6 +1,6 @@
 /* =====================================
-   VED MISSIONS HUB — INTERNATIONAL (i18n)
-   English UI + Auto-Language Responses
+   VED MISSIONS HUB — INTERNATIONAL (i18n) FIXED
+   English UI + Auto-Language + Correct Button
    Founder : Sayali P. R. Pawar
 ===================================== */
 (function () {
@@ -8,7 +8,6 @@
 
     const API_BASE = '/api/missions';
 
-    // English master dictionary (names + tags + asks)
     const EN = {
         prahari:   { name: 'VED PRAHARI',           tag: 'Civic System Remote Control',   ask: 'Describe your civic issue:' },
         avenger:   { name: 'VED AVENGER',           tag: 'Digital Consumer Lawyer',       ask: 'Describe your consumer case:' },
@@ -31,15 +30,14 @@
         bima:      { name: 'VED BIMA SAHAYAK',      tag: 'Insurance Claim Guide',         ask: 'Which claim do you want to file?' },
         apatkal:   { name: 'VED APATKAL',           tag: 'Emergency First-Response',      ask: 'Describe the emergency:' }
     };
+    const ICONS = { prahari:'🏛️', avenger:'⚖️', nyay:'🤝', satya:'👁️', prana:'🫀', hunar:'💼', yaadsathi:'❤️', ustaad:'🎓', dawai:'💊', sarkari:'📋', traffic:'🚦', upi:'💸', kisan:'🌾', health:'🚑', bankfraud:'🏦', raksha:'🛡️', scholar:'🎯', rozgar:'🧑💼', bima:'📑', apatkal:'🚨' };
 
     const FALLBACK = Object.keys(EN).map(function (id) {
-        return { id: id, name: EN[id].name, icon: '', tag: EN[id].tag, ask: EN[id].ask };
+        return { id: id, name: EN[id].name, icon: ICONS[id] || '🛰️', tag: EN[id].tag, ask: EN[id].ask };
     });
-    const ICONS = { prahari:'🏛️', avenger:'⚖️', nyay:'🤝', satya:'👁️', prana:'🫀', hunar:'💼', yaadsathi:'❤️', ustaad:'🎓', dawai:'💊', sarkari:'📋', traffic:'🚦', upi:'💸', kisan:'🌾', health:'🚑', bankfraud:'🏦', raksha:'🛡️', scholar:'🎯', rozgar:'🧑‍💼', bima:'📑', apatkal:'🚨' };
 
     let missions = FALLBACK;
 
-    // Server list lao, par English dictionary se override karo
     function normalize(list) {
         return (list || []).map(function (m) {
             const e = EN[m.id] || {};
@@ -53,7 +51,6 @@
         });
     }
 
-    // ---------- LANGUAGE DETECTION ----------
     function detectLang(t) {
         const s = String(t || '');
         const dev = /[\u0900-\u097F]/.test(s);
@@ -82,29 +79,34 @@
             .replace(/\n/g, '<br>');
     }
 
-    // ---------- CLEAN PROFESSIONAL BUTTON (no emoji rocket) ----------
+    // ---------- BUTTON (correct position: left:auto + bottom:auto = FIX) ----------
     const btn = document.createElement('button');
     btn.id = 'missionsBtn';
     btn.title = 'VED Missions';
     btn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:7px"><circle cx="12" cy="12" r="9"/><path d="M8.5 13.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8"/><path d="M9 10h.01M15 10h.01"/></svg>Missions';
-    btn.style.cssText = `
-        position: fixed !important;
-        top: 18px !important; right: 18px !important;
-        width: auto !important; height: 40px !important;
-        padding: 0 16px !important;
-        border-radius: 999px !important;
-        background: #171a1e !important;
-        color: #d7dbe0 !important;
-        font-size: 13.5px !important; font-weight: 500 !important;
-        font-family: inherit !important;
-        border: 1px solid rgba(255,255,255,.12) !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,.35) !important;
-        z-index: 999999 !important; cursor: pointer !important;
-        display: flex !important; align-items: center !important; justify-content: center !important;
-        transition: background .2s !important;
-    `;
-    btn.onmouseover = function () { btn.style.background = '#1f242a'; };
-    btn.onmouseout = function () { btn.style.background = '#171a1e'; };
+    btn.style.cssText = [
+        'position: fixed !important',
+        'left: auto !important',
+        'bottom: auto !important',
+        'top: 18px !important',
+        'right: 18px !important',
+        'width: auto !important',
+        'height: 40px !important',
+        'padding: 0 16px !important',
+        'border-radius: 999px !important',
+        'background: #171a1e !important',
+        'color: #d7dbe0 !important',
+        'font-size: 13.5px !important',
+        'font-weight: 500 !important',
+        'font-family: inherit !important',
+        'border: 1px solid rgba(255,255,255,.12) !important',
+        'box-shadow: 0 2px 10px rgba(0,0,0,.35) !important',
+        'z-index: 999999 !important',
+        'cursor: pointer !important',
+        'display: inline-flex !important',
+        'align-items: center !important',
+        'justify-content: center !important'
+    ].join(';');
     document.body.appendChild(btn);
 
     function hideFloaters() {
@@ -156,7 +158,7 @@
 
     function renderList() {
         overlay.innerHTML = '';
-        overlay.appendChild(head('VED MISSIONS', 'The jobs other AI won\'t do — VED does.', true));
+        overlay.appendChild(head('VED MISSIONS', "The jobs other AI won't do — VED does.", true));
         const grid = document.createElement('div');
         grid.className = 'ms-grid';
         missions.forEach(function (m) {
@@ -177,7 +179,7 @@
         overlay.appendChild(head(esc(m.name), m.ask || 'Describe your case:', false));
         const ta = document.createElement('textarea');
         ta.id = 'msText';
-        ta.placeholder = 'Describe your case here... (Hindi / Marathi / English — VED replies in your language)';
+        ta.placeholder = 'Describe your case here... (Hindi / Marathi / English)';
         overlay.appendChild(ta);
         const send = document.createElement('button');
         send.className = 'ms-primary';
