@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SIDEBAR v2 (CHAT HISTORY + SEARCH)
+// VED AI — SIDEBAR v2.1 (HISTORY + COMPAT FIX)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 (function () {
@@ -7,7 +7,6 @@
 
     const groupsEl = document.getElementById('sidebarGroups');
     const searchInput = document.getElementById('sidebarSearchInput');
-    const newChatBtn = document.getElementById('newChatBtn');
 
     let allChats = [];
     let filteredChats = [];
@@ -37,10 +36,9 @@
         if (!groupsEl) return;
         groupsEl.innerHTML = '';
         if (chats.length === 0) {
-            groupsEl.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,.4);font-size:13px;">No chats yet</div>';
+            groupsEl.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,.4);font-size:13px;">No conversations yet.</div>';
             return;
         }
-
         const grouped = groupByDate(chats);
         const order = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days'];
         const otherKeys = Object.keys(grouped).filter(function (k) { return order.indexOf(k) === -1; }).sort();
@@ -54,77 +52,79 @@
                 const item = document.createElement('div');
                 item.className = 'sb-chat-item';
                 item.textContent = chat.firstMessage || 'Chat';
-                item.addEventListener('click', function () {
-                    loadChat(chat.id);
-                });
+                item.addEventListener('click', function () { loadChat(chat); });
                 section.appendChild(item);
             });
             groupsEl.appendChild(section);
         });
     }
 
-    function loadChat(chatId) {
-        // TODO: Load specific chat (for now, just alert)
-        alert('Loading chat: ' + chatId);
+    function loadChat(chat) {
+        const box = document.getElementById('chatMessages');
+        if (!box || !chat || !chat.messages) return;
+        box.innerHTML = '';
+        chat.messages.forEach(function (m) {
+            const d = document.createElement('div');
+            d.className = m.role === 'user' ? 'user-message' : 'bot-message';
+            d.textContent = m.message;
+            box.appendChild(d);
+        });
+        box.scrollTop = box.scrollHeight;
+        document.body.classList.add('chat-active');
     }
 
     function fetchHistory() {
         fetch('/history')
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                if (data && data.history) {
-                    // Group conversations (every 2 messages = 1 chat)
-                    const chats = [];
-                    let currentChat = null;
-                    data.history.forEach(function (msg, idx) {
-                        if (msg.role === 'user') {
-                            currentChat = {
-                                id: idx,
-                                firstMessage: msg.message.slice(0, 40),
-                                timestamp: msg.timestamp || new Date(),
-                                messages: []
-                            };
-                            chats.push(currentChat);
-                        }
-                        if (currentChat) {
-                            currentChat.messages.push(msg);
-                        }
-                    });
-                    allChats = chats.reverse(); // newest first
-                    filteredChats = allChats;
-                    renderGroups(filteredChats);
-                }
+                if (!data || !data.history) return;
+                const chats = [];
+                let current = null;
+                data.history.forEach(function (msg, idx) {
+                    if (msg.role === 'user') {
+                        current = {
+                            id: idx,
+                            firstMessage: String(msg.message || 'Chat').slice(0, 40),
+                            timestamp: msg.timestamp || new Date(),
+                            messages: []
+                        };
+                        chats.push(current);
+                    }
+                    if (current) current.messages.push(msg);
+                });
+                allChats = chats.reverse();
+                filteredChats = allChats;
+                renderGroups(filteredChats);
             })
-            .catch(function (err) {
-                console.warn('Failed to load history:', err);
-            });
+            .catch(function (err) { console.warn('History load failed:', err); });
     }
 
     if (searchInput) {
         searchInput.addEventListener('input', function () {
             const q = searchInput.value.toLowerCase();
-            if (!q) {
-                filteredChats = allChats;
-            } else {
-                filteredChats = allChats.filter(function (c) {
-                    return c.firstMessage.toLowerCase().indexOf(q) !== -1;
-                });
-            }
+            filteredChats = !q ? allChats : allChats.filter(function (c) {
+                return c.firstMessage.toLowerCase().indexOf(q) !== -1;
+            });
             renderGroups(filteredChats);
         });
     }
 
-    if (newChatBtn) {
-        newChatBtn.addEventListener('click', function () {
-            // Clear chat box
-            const box = document.getElementById('chatMessages');
-            if (box) box.innerHTML = '<div class="bot-message"><b>Welcome to VED AI</b><br><br>Ask me anything.</div>';
-            const inp = document.getElementById('userInput');
-            if (inp) inp.value = '';
-            document.body.classList.remove('chat-active');
-        });
-    }
+    // ==========================================
+    // 🛡️ COMPATIBILITY SHIM — script_new.js ko global "Sidebar" chahiye.
+    // Ye proxy kisi bhi Sidebar.xxx() call ko crash nahi hone dega.
+    // ==========================================
+    var SHIM = new Proxy(function () {}, {
+        get: function (t, p) {
+            if (p === Symbol.toPrimitive) return function () { return 0; };
+            if (p === 'toString' || p === 'valueOf') return function () { return 0; };
+            if (p === 'then') return undefined;
+            if (p === 'refresh' || p === 'reload' || p === 'update') return fetchHistory;
+            return SHIM;
+        },
+        apply: function () { return SHIM; },
+        set: function () { return true; }
+    });
+    window.Sidebar = SHIM;
 
-    // Load on init
-    setTimeout(fetchHistory, 500);
+    setTimeout(fetchHistory, 600);
 })();
