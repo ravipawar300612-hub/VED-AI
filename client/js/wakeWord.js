@@ -1,174 +1,113 @@
-// =====================================
-// VED AI — WAKE WORD ("Hey VED")
+// ==========================================
+// VED AI — WAKE WORD v2 ("Hey VED" hands-free)
 // Founder: Sayali P. R. Pawar
-// =====================================
+// ==========================================
 (function () {
+    'use strict';
 
-    const toggleBtn = document.getElementById("wakeWordToggleBtn");
-    const userInput = document.getElementById("userInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const voiceOverlay = document.getElementById("voiceOverlay");
-
-    const SpeechAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechAPI) {
-        console.warn("⚠️ Wake word: SpeechRecognition supported nahi hai");
-        return;
-    }
-
+    const API = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const KEY = 'vedWakeWord';
+    let rec = null;
     let enabled = false;
-    let listeningForCommand = false;
-    let wakeRec = null;
-    let commandRec = null;
-    let toast = null;
+    let running = false;
+    let btn = null;
+    let cooldownUntil = 0;
 
-    // "Hey VED" ke alag-alag sunne ke tarike (mic galat bhi sunta hai!)
-    const WAKE_PATTERNS = [
-        "hey ved", "hey bed", "hey red", "hey vet",
-        "he ved", "ok ved", "okay ved", "are ved"
-    ];
-
-    // ---------- Chota sa toast (screen par message) ----------
-    function showToast(text, borderColor) {
-        if (!toast) {
-            toast = document.createElement("div");
-            Object.assign(toast.style, {
-                position: "fixed",
-                top: "16px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: "1200",
-                padding: "10px 18px",
-                borderRadius: "50px",
-                background: "rgba(17,17,19,.95)",
-                border: "1px solid rgba(108,108,240,.6)",
-                color: "#fff",
-                fontSize: "13px",
-                boxShadow: "0 6px 24px rgba(0,0,0,.5)",
-                display: "none",
-                pointerEvents: "none",
-                maxWidth: "90vw",
-                textAlign: "center"
-            });
-            document.body.appendChild(toast);
-        }
-        toast.textContent = text;
-        toast.style.borderColor = borderColor || "rgba(108,108,240,.6)";
-        toast.style.display = "block";
+    function overlayOpen() {
+        const o = document.getElementById('voiceOverlay');
+        return !!(o && o.classList.contains('active'));
     }
 
-    function hideToast() {
-        if (toast) toast.style.display = "none";
+    function injectCSS() {
+        const st = document.createElement('style');
+        st.textContent = '#wakeWordToggleBtn.wake-on{color:#4ade80 !important;border-color:rgba(74,222,128,.5) !important;box-shadow:0 0 10px rgba(74,222,128,.35);animation:wakePulse 1.6s infinite}@keyframes wakePulse{0%,100%{opacity:1}50%{opacity:.55}}';
+        document.head.appendChild(st);
     }
 
-    // ---------- WAKE WORD SUNNA (continuous) ----------
-    function startWakeListening() {
-        if (!enabled || listeningForCommand) return;
-        // Voice mode chal raha hai toh conflict mat karo
-        if (voiceOverlay && voiceOverlay.dataset.state !== "idle") return;
+    function setBtn() {
+        if (!btn) btn = document.getElementById('wakeWordToggleBtn');
+        if (!btn) return;
+        btn.classList.toggle('wake-on', enabled);
+        btn.title = enabled ? 'Hey VED: ON' : 'Hey VED: OFF';
+    }
 
-        wakeRec = new SpeechAPI();
-        wakeRec.lang = "en-IN";
-        wakeRec.continuous = true;
-        wakeRec.interimResults = true;
+    function toast(msg) {
+        const t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.95);color:#fff;padding:10px 18px;border-radius:12px;font-size:13.5px;z-index:2147483647;border:1px solid rgba(255,255,255,0.25);';
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 2200);
+    }
 
-        wakeRec.onresult = (e) => {
-            let interim = "";
-            for (let i = e.resultIndex; i < e.results.length; i++) {
-                const t = e.results[i][0].transcript.toLowerCase();
-                if (e.results[i].isFinal) {
-                    if (WAKE_PATTERNS.some(p => t.includes(p))) { onWake(); return; }
-                } else {
-                    interim += t;
+    function onHeard(text) {
+        if (!enabled || overlayOpen()) return;
+        if (Date.now() < cooldownUntil) return;
+        const t = String(text || '').toLowerCase();
+        const hit = /(hey|hi|hello|oye|are)\s+(ved|red|wed)(\s+ai)?\b/.test(t) || /\bved\s+ai\b/.test(t);
+        if (!hit) return;
+        cooldownUntil = Date.now() + 4000;
+        stop();
+        toast('🎤 Hey VED suna!');
+        setTimeout(function () {
+            if (window.VoiceMode && VoiceMode.open) VoiceMode.open();
+        }, 150);
+    }
+
+    function start() {
+        if (!API || !enabled || running || overlayOpen()) return;
+        running = true;
+        try {
+            rec = new API();
+            rec.lang = 'en-IN';
+            rec.continuous = true;
+            rec.interimResults = true;
+            rec.maxAlternatives = 1;
+            rec.onresult = function (e) {
+                for (let i = e.resultIndex; i < e.results.length; i++) {
+                    onHeard(e.results[i][0].transcript);
                 }
-            }
-            if (WAKE_PATTERNS.some(p => interim.includes(p))) onWake();
-        };
-
-        wakeRec.onerror = (e) => {
-            if (e.error === "not-allowed") {
-                showToast("🎙️ Mic permission chahiye! Browser settings mein allow karo.", "#E5484D");
-                disable();
-            }
-        };
-
-        wakeRec.onend = () => {
-            // Browser khud band kar de toh dobara sunna shuru karo
-            if (enabled && !listeningForCommand) {
-                setTimeout(startWakeListening, 400);
-            }
-        };
-
-        try { wakeRec.start(); } catch (err) {}
+            };
+            rec.onend = function () {
+                running = false;
+                if (enabled && !overlayOpen()) setTimeout(start, 400);
+            };
+            rec.onerror = function (e) {
+                if (e.error === 'not-allowed') { enabled = false; localStorage.setItem(KEY, '0'); setBtn(); }
+                running = false;
+            };
+            rec.start();
+        } catch (err) { running = false; }
     }
 
-    // ---------- WAKE WORD MILA → COMMAND SUNO ----------
-    function onWake() {
-        if (listeningForCommand) return;
-        listeningForCommand = true;
-        try { wakeRec && wakeRec.stop(); } catch (e) {}
-
-        showToast("🎙️ VED sun raha hai... boliye!");
-
-        commandRec = new SpeechAPI();
-        commandRec.lang = "en-IN";
-        commandRec.continuous = false;
-        commandRec.interimResults = false;
-
-        commandRec.onresult = (e) => {
-            const text = e.results[0][0].transcript.trim();
-            listeningForCommand = false;
-            hideToast();
-
-            if (text && userInput && sendBtn) {
-                userInput.value = text;      // command ko chat box mein daalo
-                sendBtn.click();             // aur bhej do!
-                showToast("✅ VED ko bhej diya: " + text);
-                setTimeout(hideToast, 2500);
-            }
-            if (enabled) setTimeout(startWakeListening, 3000);
-        };
-
-        commandRec.onerror = () => {
-            listeningForCommand = false;
-            showToast("😕 Sun nahi paya — phir se 'Hey VED' boliye", "#E5484D");
-            setTimeout(hideToast, 2500);
-            if (enabled) setTimeout(startWakeListening, 800);
-        };
-
-        commandRec.onend = () => {
-            if (listeningForCommand) {
-                listeningForCommand = false;
-                hideToast();
-                if (enabled) setTimeout(startWakeListening, 500);
-            }
-        };
-
-        setTimeout(() => { try { commandRec.start(); } catch (e) {} }, 250);
+    function stop() {
+        if (rec) { try { rec.onend = null; rec.abort(); } catch (e) {} rec = null; }
+        running = false;
     }
 
-    // ---------- ON / OFF ----------
-    function enable() {
-        enabled = true;
-        if (toggleBtn) toggleBtn.classList.add("active");
-        showToast("👂 Wake word ON — ab 'Hey VED' boliye!");
-        setTimeout(hideToast, 3000);
-        startWakeListening();
+    function enable() { enabled = true; localStorage.setItem(KEY, '1'); setBtn(); start(); }
+    function disable() { enabled = false; localStorage.setItem(KEY, '0'); setBtn(); stop(); }
+
+    function init() {
+        injectCSS();
+        btn = document.getElementById('wakeWordToggleBtn');
+        if (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (enabled) { disable(); toast('Hey VED: OFF'); }
+                else { enable(); toast('Hey VED: ON — bolo "Hey VED"!'); }
+            });
+        }
+        // Watchdog: voice overlay band ho → wake wapas chalu; overlay khule → wake chup
+        setInterval(function () {
+            if (enabled && !overlayOpen() && !running) start();
+            if (overlayOpen() && running) stop();
+        }, 1500);
+        if (localStorage.getItem(KEY) === '1') setTimeout(enable, 1500);
+        setBtn();
     }
 
-    function disable() {
-        enabled = false;
-        listeningForCommand = false;
-        if (toggleBtn) toggleBtn.classList.remove("active");
-        try { wakeRec && wakeRec.stop(); } catch (e) {}
-        try { commandRec && commandRec.stop(); } catch (e) {}
-        hideToast();
-    }
+    if (document.readyState !== 'loading') init();
+    else document.addEventListener('DOMContentLoaded', init);
 
-    if (toggleBtn) {
-        toggleBtn.addEventListener("click", () => {
-            if (enabled) disable();
-            else enable();
-        });
-    }
-
+    window.WakeWord = { enable: enable, disable: disable, isEnabled: function () { return enabled; } };
 })();
