@@ -7,43 +7,31 @@ module.exports = function() {
         const prompt = String((req.body && req.body.prompt) || '').trim();
         if (!prompt) return res.json({ success: false, error: 'Prompt missing' });
 
-        // Direct Free Fallback (Guaranteed to work for demo)
-        // Hum Gemini try karenge, par agar 1 second mein jawab na aaye toh seedha free wala use karenge
-        const fallbackUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=768&height=768&nologo=true&seed=' + Date.now();
+        try {
+            // Try Pollinations via Server Fetch (Bypass browser blocks)
+            const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=768&height=768&nologo=true&seed=' + Date.now();
+            
+            const response = await fetch(imgUrl);
+            if (!response.ok) throw new Error('Fetch failed');
+            
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64 = buffer.toString('base64');
+            
+            return res.json({ 
+                success: true, 
+                mime: 'image/jpeg', 
+                data: base64 
+            });
 
-        const key = process.env.GEMINI_API_KEY;
-        if (key) {
-            try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 4000); // 4 second timeout
-
-                const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=' + key, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        contents: [{ parts: [{ text: prompt }] }], 
-                        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] } 
-                    }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeout);
-
-                if (r.ok) {
-                    const d = await r.json();
-                    const parts = (d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || [];
-                    for (const p of parts) {
-                        if (p.inlineData && p.inlineData.data) {
-                            return res.json({ success: true, mime: p.inlineData.mimeType, data: p.inlineData.data });
-                        }
-                    }
-                }
-            } catch (e) { 
-                console.log("Gemini failed/timeout, using fallback"); 
-            }
+        } catch (e) {
+            console.error("Image generation error:", e);
+            // Agar ye bhi fail ho, toh ek dummy image bhej do taaki app crash na ho
+            return res.json({ 
+                success: true, 
+                url: 'https://via.placeholder.com/512x512/1a1a1a/ffffff?text=Image+Generation+Failed' 
+            });
         }
-        
-        // Agar Gemini fail hua ya time out hua, toh ye chalega
-        return res.json({ success: true, url: fallbackUrl });
     });
 
     return router;
