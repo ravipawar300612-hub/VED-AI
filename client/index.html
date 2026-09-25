@@ -876,5 +876,60 @@
   window.WakeWord={enable:enable,disable:disable,isEnabled:function(){return on;}};
 })();
 </script>
+<!-- ═══ VED IMAGE STUDIO v1 ═══ -->
+<style>
+#imgStudio{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#imgStudio.open{display:flex}
+#imgStudio .panel{width:min(560px,92vw);max-height:88vh;overflow:auto;background:#14171c;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+#imgStudio h3{margin:0 0 4px;font-size:16px;color:#ececec}
+#imgStudio .sub{font-size:12.5px;color:#9aa4b2;margin-bottom:14px}
+#imgStudio textarea{width:100%;min-height:84px;background:#1b1f26;border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#eef2f6;padding:12px;font-size:14px;font-family:inherit;resize:vertical;outline:none}
+#imgStudio textarea:focus{border-color:rgba(255,255,255,.3)}
+#imgStudio .row{display:flex;gap:10px;margin-top:12px}
+#imgStudio button{border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid rgba(255,255,255,.14);background:#1b1f26;color:#d7dbe0}
+#imgStudio button.primary{background:linear-gradient(135deg,#ff6b6b,#ee2b5b);border:none;color:#fff}
+#imgStudio .out{margin-top:14px}
+#imgStudio .out img{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.15)}
+#imgStudio .spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.15);border-top-color:#ee2b5b;border-radius:50%;animation:imgSpin .9s linear infinite;margin:18px auto}
+@keyframes imgSpin{to{transform:rotate(360deg)}}
+</style>
+<script>
+(function(){
+  var ov=document.createElement('div'); ov.id='imgStudio';
+  ov.innerHTML='<div class="panel"><h3>Image Studio</h3><div class="sub">Describe a scene — VED will paint it.</div><textarea id="imgPrompt" placeholder="e.g. A monsoon evening in Mumbai, cinematic lighting..."></textarea><div class="row"><button class="primary" id="imgGen" type="button">Generate</button><button id="imgClose" type="button">Close</button></div><div class="out" id="imgOut"></div></div>';
+  document.body.appendChild(ov);
+  var ta=ov.querySelector('#imgPrompt'), out=ov.querySelector('#imgOut');
+  ov.querySelector('#imgClose').onclick=function(){ ov.classList.remove('open'); };
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.classList.remove('open'); });
+  ov.querySelector('#imgGen').onclick=function(){
+    var p=(ta.value||'').trim(); if(!p){ ta.focus(); return; }
+    out.innerHTML='<div class="spin"></div>';
+    fetch('/api/image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d.success) throw new Error(d.error||'fail');
+        var src = d.data ? ('data:'+(d.mime||'image/png')+';base64,'+d.data) : d.url;
+        out.innerHTML='';
+        var img=document.createElement('img'); img.src=src; img.alt=p; out.appendChild(img);
+        var cap=document.createElement('div'); cap.style.cssText='margin-top:8px;font-size:12.5px;color:#9aa4b2'; cap.textContent='🎨 '+p; out.appendChild(cap);
+        var box=document.getElementById('chatMessages');
+        if(box){ document.body.classList.add('chat-active');
+          var um=document.createElement('div'); um.className='user-message'; um.textContent='🎨 '+p; box.appendChild(um);
+          var bm=document.createElement('div'); bm.className='bot-message'; var im2=document.createElement('img'); im2.src=src; im2.style.cssText='max-width:320px;width:100%;border-radius:14px'; bm.appendChild(im2); box.appendChild(bm); box.scrollTop=box.scrollHeight; }
+      })
+      .catch(function(){ out.innerHTML='<div class="sub">Image generate nahi hui. Dobara try karo.</div>'; });
+  };
+  function addChip(){
+    var w=document.getElementById('vedActions');
+    if(!w){ setTimeout(addChip,700); return; }
+    if(w.querySelector('[data-imgchip]')) return;
+    var b=document.createElement('button'); b.className='ved-action'; b.type='button'; b.setAttribute('data-imgchip','1');
+    b.innerHTML='<span class="ico">🎨</span>Image Studio';
+    b.addEventListener('click',function(){ ov.classList.add('open'); setTimeout(function(){ ta.focus(); },100); });
+    w.appendChild(b);
+  }
+  addChip();
+})();
+</script>
 </body>
 </html>
