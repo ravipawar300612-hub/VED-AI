@@ -931,5 +931,66 @@
   addChip();
 })();
 </script>
+<!-- IMAGE COMMAND FIX -->
+<script>
+(function(){
+  function checkImageCommand(text) {
+    if(!text) return null;
+    var t = text.trim().toLowerCase();
+    if(t.startsWith('image:') || t.startsWith('img:') || t.startsWith('photo:') || t.startsWith('tasveer:')) {
+      return text.trim().substring(text.indexOf(':') + 1).trim();
+    }
+    return null;
+  }
+
+  window.addEventListener('click', function(e) {
+    if(e.target.closest('#sendBtn')) {
+      var inp = document.getElementById('userInput');
+      if(!inp) return;
+      var prompt = checkImageCommand(inp.value);
+      if(prompt) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        inp.value = '';
+        
+        var chat = document.getElementById('chatMessages');
+        if(chat) {
+          var uMsg = document.createElement('div');
+          uMsg.className = 'user-message';
+          uMsg.textContent = '🎨 ' + prompt;
+          chat.appendChild(uMsg);
+
+          var bMsg = document.createElement('div');
+          bMsg.className = 'bot-message';
+          bMsg.innerHTML = 'Generating image... ⏳';
+          chat.appendChild(bMsg);
+          chat.scrollTop = chat.scrollHeight;
+
+          fetch('/api/image', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({prompt: prompt})
+          })
+          .then(r => r.json())
+          .then(data => {
+            if(data.success) {
+              var img = document.createElement('img');
+              img.src = data.data ? ('data:' + data.mime + ';base64,' + data.data) : data.url;
+              img.style.maxWidth = '100%';
+              img.style.borderRadius = '12px';
+              bMsg.innerHTML = '';
+              bMsg.appendChild(img);
+            } else {
+              bMsg.textContent = 'Image generation failed.';
+            }
+            chat.scrollTop = chat.scrollHeight;
+          })
+          .catch(() => { bMsg.textContent = 'Error generating image.'; });
+        }
+      }
+    }
+  }, true); 
+})();
+</script>
 </body>
 </html>
