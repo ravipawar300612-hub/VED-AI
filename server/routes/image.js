@@ -7,30 +7,39 @@ module.exports = function() {
         const prompt = String((req.body && req.body.prompt) || '').trim();
         if (!prompt) return res.json({ success: false, error: 'Prompt missing' });
 
+        const key = process.env.GEMINI_API_KEY;
+        if (!key) return res.json({ success: false, error: 'API Key Missing' });
+
         try {
-            // Try Pollinations via Server Fetch (Bypass browser blocks)
-            const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=768&height=768&nologo=true&seed=' + Date.now();
-            
-            const response = await fetch(imgUrl);
-            if (!response.ok) throw new Error('Fetch failed');
-            
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            const base64 = buffer.toString('base64');
-            
-            return res.json({ 
-                success: true, 
-                mime: 'image/jpeg', 
-                data: base64 
+            const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=' + key, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    contents: [{ parts: [{ text: prompt }] }], 
+                    generationConfig: { responseModalities: ['IMAGE', 'TEXT'] } 
+                })
             });
 
+            if (!r.ok) {
+                const errText = await r.text();
+                console.error("Gemini Error:", errText);
+                return res.json({ success: false, error: 'Gemini API Error: ' + r.status });
+            }
+
+            const d = await r.json();
+            const parts = (d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || [];
+            
+            for (const p of parts) {
+                if (p.inlineData && p.inlineData.data) {
+                    return res.json({ success: true, mime: p.inlineData.mimeType, data: p.inlineData.data });
+                }
+            }
+            
+            return res.json({ success: false, error: 'No image in response' });
+
         } catch (e) {
-            console.error("Image generation error:", e);
-            // Agar ye bhi fail ho, toh ek dummy image bhej do taaki app crash na ho
-            return res.json({ 
-                success: true, 
-                url: 'https://via.placeholder.com/512x512/1a1a1a/ffffff?text=Image+Generation+Failed' 
-            });
+            console.error("Server Error:", e);
+            return res.json({ success: false, error: e.message });
         }
     });
 
