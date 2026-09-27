@@ -15,6 +15,7 @@ const setupAuth = require("./auth");
 const { scanMessage } = require("./scamEngine");
 
 const app = express();
+app.use('/tts', require('./routes/tts')());
 
 // ===============================
 // ENVIRONMENT VALIDATION

@@ -1,11 +1,23 @@
 // ==========================================
-// VED AI — TTS ENGINE v2 (REAL VOICES: VIRAJ + KANIKA)
+// VED AI — TTS ENGINE v3 (SELF-PARSING, PRIORITY ROUTE)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
 
 module.exports = function() {
     const router = express.Router();
+
+    // Body khud padhta hai (middleware pe depend nahi karta)
+    function getBody(req) {
+        return new Promise(function (resolve) {
+            if (req.body && Object.keys(req.body).length) return resolve(req.body);
+            let data = '';
+            req.on('data', function (c) { data += c; });
+            req.on('end', function () {
+                try { resolve(JSON.parse(data || '{}')); } catch (e) { resolve({}); }
+            });
+        });
+    }
 
     router.get('/voices', async (req, res) => {
         const key = process.env.ELEVENLABS_API_KEY;
@@ -26,8 +38,9 @@ module.exports = function() {
     });
 
     router.post('/', async (req, res) => {
-        const text = String((req.body && req.body.text) || '').trim();
-        const voiceId = String((req.body && req.body.voice) || '');
+        const body = await getBody(req);
+        const text = String(body.text || '').trim();
+        const voiceId = String(body.voice || '');
 
         if (!text) return res.status(400).send('No text');
         if (text.length > 2500) return res.status(400).send('Text too long');
