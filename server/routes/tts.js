@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — TTS ENGINE v3 (SELF-PARSING, PRIORITY ROUTE)
+// VED AI — TTS ENGINE v4 (VED + VANI LOCKED)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
@@ -7,7 +7,16 @@ const express = require('express');
 module.exports = function() {
     const router = express.Router();
 
-    // Body khud padhta hai (middleware pe depend nahi karta)
+    // DO REAL VOICES (Free plan allowed, real human actors)
+    const VOICES = [
+        { id: 'pNInz6obpgDQGcFmaJgB', name: 'VED (Male - Beta)' },
+        { id: '21m00Tcm4TlvDq8ikWAM', name: 'VANI (Female - Behen)' }
+    ];
+
+    router.get('/voices', async (req, res) => {
+        res.json({ voices: VOICES });
+    });
+
     function getBody(req) {
         return new Promise(function (resolve) {
             if (req.body && Object.keys(req.body).length) return resolve(req.body);
@@ -19,35 +28,20 @@ module.exports = function() {
         });
     }
 
-    router.get('/voices', async (req, res) => {
-        const key = process.env.ELEVENLABS_API_KEY;
-        if (!key) return res.json({ voices: [] });
-        try {
-            const r = await fetch('https://api.elevenlabs.io/v1/voices', {
-                headers: { 'xi-api-key': key }
-            });
-            if (!r.ok) return res.json({ voices: [] });
-            const d = await r.json();
-            const list = (d.voices || []).map(function (v) {
-                return { id: v.voice_id, name: v.name };
-            });
-            res.json({ voices: list });
-        } catch (e) {
-            res.json({ voices: [] });
-        }
-    });
-
     router.post('/', async (req, res) => {
         const body = await getBody(req);
         const text = String(body.text || '').trim();
-        const voiceId = String(body.voice || '');
+        let voiceId = String(body.voice || '');
 
         if (!text) return res.status(400).send('No text');
         if (text.length > 2500) return res.status(400).send('Text too long');
 
         const key = process.env.ELEVENLABS_API_KEY;
         if (!key) return res.status(500).send('API key missing');
-        if (!voiceId) return res.status(400).send('Voice missing');
+
+        // Safety: galat voice aaye toh VED (male) pe lock
+        const valid = VOICES.some(function (v) { return v.id === voiceId; });
+        if (!valid) voiceId = VOICES[0].id;
 
         try {
             const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
