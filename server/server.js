@@ -718,6 +718,7 @@ ${memoryBlock}`;
 // ===============================
 setupAuth(app);
 app.use('/api/missions', require('./routes/missions')());
+app.use('/tts', require('./routes/tts')());
 app.use('/api/image', require('./routes/image')());
 
 const PORT = process.env.PORT || 3000;

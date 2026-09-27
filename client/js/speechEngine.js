@@ -119,7 +119,8 @@ const SpeechEngine = (function () {
 
     // ---------- AUDIO QUEUE ----------
     function playText(text, cb) {
-        fetch("/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) })
+        const savedVoice = localStorage.getItem('vedVoice') || '';
+        fetch("/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text, voice: savedVoice }) })
             .then(function (r) { if (!r.ok) throw new Error("TTS " + r.status); return r.blob(); })
             .then(function (blob) {
                 const url = URL.createObjectURL(blob);
