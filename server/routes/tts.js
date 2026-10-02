@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — TTS ENGINE v5 (FOUNDER VOICE = DEFAULT)
+// VED AI — TTS ENGINE v6 (VED DEFAULT + CREATOR MODE)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
@@ -7,9 +7,12 @@ const express = require('express');
 module.exports = function() {
     const router = express.Router();
 
+    const VED_ID = 'pNInz6obpgDQGcFmaJgB';
+    const VANI_ID = '21m00Tcm4TlvDq8ikWAM';
+
     const PREMADE = [
-        { id: 'pNInz6obpgDQGcFmaJgB', name: 'VED (Male - Backup)' },
-        { id: '21m00Tcm4TlvDq8ikWAM', name: 'VANI (Female - Backup)' }
+        { id: VED_ID, name: 'VED (Male - Default)' },
+        { id: VANI_ID, name: 'VANI (Female)' }
     ];
     let clonedCache = [];
 
@@ -24,12 +27,12 @@ module.exports = function() {
             const d = await r.json();
             clonedCache = (d.voices || [])
                 .filter(function (v) { return v.category === 'cloned'; })
-                .map(function (v) { return { id: v.voice_id, name: v.name + ' (Founder Voice)' }; });
+                .map(function (v) { return { id: v.voice_id, name: v.name + ' (Creator Mode)' }; });
         } catch (e) { /* silent */ }
     }
 
     function defaultVoice() {
-        return (clonedCache[0] && clonedCache[0].id) || PREMADE[0].id;
+        return VED_ID; // Hamesha VED (Adam) hi default hoga
     }
 
     function getBody(req) {
@@ -45,7 +48,8 @@ module.exports = function() {
 
     router.get('/voices', async (req, res) => {
         await refreshCloned();
-        res.json({ voices: clonedCache.concat(PREMADE) });
+        // Pehle VED aur VANI, phir Creator Mode
+        res.json({ voices: PREMADE.concat(clonedCache) });
     });
 
     router.post('/', async (req, res) => {
@@ -60,7 +64,7 @@ module.exports = function() {
         if (!key) return res.status(500).send('API key missing');
 
         await refreshCloned();
-        const known = clonedCache.concat(PREMADE).some(function (v) { return v.id === voiceId; });
+        const known = PREMADE.concat(clonedCache).some(function (v) { return v.id === voiceId; });
         if (!known) voiceId = defaultVoice();
 
         try {
