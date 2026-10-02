@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — TTS ENGINE v4 (VED + VANI LOCKED)
+// VED AI — TTS ENGINE v5 (FOUNDER VOICE = DEFAULT)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
@@ -7,15 +7,30 @@ const express = require('express');
 module.exports = function() {
     const router = express.Router();
 
-    // DO REAL VOICES (Free plan allowed, real human actors)
-    const VOICES = [
-        { id: 'pNInz6obpgDQGcFmaJgB', name: 'VED (Male - Beta)' },
-        { id: '21m00Tcm4TlvDq8ikWAM', name: 'VANI (Female - Behen)' }
+    const PREMADE = [
+        { id: 'pNInz6obpgDQGcFmaJgB', name: 'VED (Male - Backup)' },
+        { id: '21m00Tcm4TlvDq8ikWAM', name: 'VANI (Female - Backup)' }
     ];
+    let clonedCache = [];
 
-    router.get('/voices', async (req, res) => {
-        res.json({ voices: VOICES });
-    });
+    async function refreshCloned() {
+        const key = process.env.ELEVENLABS_API_KEY;
+        if (!key) return;
+        try {
+            const r = await fetch('https://api.elevenlabs.io/v1/voices', {
+                headers: { 'xi-api-key': key }
+            });
+            if (!r.ok) return;
+            const d = await r.json();
+            clonedCache = (d.voices || [])
+                .filter(function (v) { return v.category === 'cloned'; })
+                .map(function (v) { return { id: v.voice_id, name: v.name + ' (Founder Voice)' }; });
+        } catch (e) { /* silent */ }
+    }
+
+    function defaultVoice() {
+        return (clonedCache[0] && clonedCache[0].id) || PREMADE[0].id;
+    }
 
     function getBody(req) {
         return new Promise(function (resolve) {
@@ -28,6 +43,11 @@ module.exports = function() {
         });
     }
 
+    router.get('/voices', async (req, res) => {
+        await refreshCloned();
+        res.json({ voices: clonedCache.concat(PREMADE) });
+    });
+
     router.post('/', async (req, res) => {
         const body = await getBody(req);
         const text = String(body.text || '').trim();
@@ -39,9 +59,9 @@ module.exports = function() {
         const key = process.env.ELEVENLABS_API_KEY;
         if (!key) return res.status(500).send('API key missing');
 
-        // Safety: galat voice aaye toh VED (male) pe lock
-        const valid = VOICES.some(function (v) { return v.id === voiceId; });
-        if (!valid) voiceId = VOICES[0].id;
+        await refreshCloned();
+        const known = clonedCache.concat(PREMADE).some(function (v) { return v.id === voiceId; });
+        if (!known) voiceId = defaultVoice();
 
         try {
             const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
@@ -55,9 +75,9 @@ module.exports = function() {
                     text: text,
                     model_id: 'eleven_multilingual_v2',
                     voice_settings: {
-                        stability: 0.45,
-                        similarity_boost: 0.8,
-                        style: 0.25,
+                        stability: 0.5,
+                        similarity_boost: 0.85,
+                        style: 0.2,
                         use_speaker_boost: true
                     }
                 })
