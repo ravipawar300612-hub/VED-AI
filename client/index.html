@@ -14,9 +14,6 @@
             max-height: 140px; opacity: 1; overflow: hidden;
             transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        body.chat-active .container h1, .container .tagline, body.chat-active .container .subtitle {
-            max-height: 0; opacity: 0; margin: 0 !important; padding: 0 !important;
-        }
         .chat-box { transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
     <meta charset="UTF-8">
@@ -876,7 +873,7 @@
   window.WakeWord={enable:enable,disable:disable,isEnabled:function(){return on;}};
 })();
 </script>
-<!-- ═══ VED IMAGE STUDIO v1 ═══ -->
+<!-- ═══ VED IMAGE STUDIO v2 ═══ -->
 <style>
 #imgStudio{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #imgStudio.open{display:flex}
@@ -908,7 +905,7 @@
       .then(function(r){ return r.json(); })
       .then(function(d){
         if(!d.success) throw new Error(d.error||'fail');
-        var src = d.data ? ('data:'+(d.mime||'image/png')+';base64,'+d.data) : d.url;
+        var src = d.url || (d.data ? ('data:'+(d.mime||'image/png')+';base64,'+d.data) : '');
         out.innerHTML='';
         var img=document.createElement('img'); img.src=src; img.alt=p; out.appendChild(img);
         var cap=document.createElement('div'); cap.style.cssText='margin-top:8px;font-size:12.5px;color:#9aa4b2'; cap.textContent='🎨 '+p; out.appendChild(cap);
@@ -929,67 +926,6 @@
     w.appendChild(b);
   }
   addChip();
-})();
-</script>
-<!-- IMAGE COMMAND FIX -->
-<script>
-(function(){
-  function checkImageCommand(text) {
-    if(!text) return null;
-    var t = text.trim().toLowerCase();
-    if(t.startsWith('image:') || t.startsWith('img:') || t.startsWith('photo:') || t.startsWith('tasveer:')) {
-      return text.trim().substring(text.indexOf(':') + 1).trim();
-    }
-    return null;
-  }
-
-  window.addEventListener('click', function(e) {
-    if(e.target.closest('#sendBtn')) {
-      var inp = document.getElementById('userInput');
-      if(!inp) return;
-      var prompt = checkImageCommand(inp.value);
-      if(prompt) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        inp.value = '';
-        
-        var chat = document.getElementById('chatMessages');
-        if(chat) {
-          var uMsg = document.createElement('div');
-          uMsg.className = 'user-message';
-          uMsg.textContent = '🎨 ' + prompt;
-          chat.appendChild(uMsg);
-
-          var bMsg = document.createElement('div');
-          bMsg.className = 'bot-message';
-          bMsg.innerHTML = 'Generating image... ⏳';
-          chat.appendChild(bMsg);
-          chat.scrollTop = chat.scrollHeight;
-
-          fetch('/api/image', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({prompt: prompt})
-          })
-          .then(r => r.json())
-          .then(data => {
-            if(data.success) {
-              var img = document.createElement('img');
-              img.src = data.data ? ('data:' + data.mime + ';base64,' + data.data) : data.url;
-              img.style.maxWidth = '100%';
-              img.style.borderRadius = '12px';
-              bMsg.innerHTML = '';
-              bMsg.appendChild(img);
-            } else {
-              bMsg.textContent = 'Image generation failed.';
-            }
-            chat.scrollTop = chat.scrollHeight;
-          })
-          .catch(() => { bMsg.textContent = 'Error generating image.'; });
-        }
-      }
-    }
-  }, true); 
 })();
 </script>
 <!-- REAL VOICE PICKER: VIRAJ + KANIKA -->
@@ -1048,6 +984,56 @@
   btn.style.cssText = 'position:fixed;bottom:90px;right:20px;width:48px;height:48px;border-radius:50%;background:#14171c;border:1px solid rgba(255,255,255,.15);color:#fff;font-size:20px;cursor:pointer;z-index:2147483641;box-shadow:0 4px 12px rgba(0,0,0,.4)';
   btn.onclick = function(){ picker.classList.toggle('open'); if (picker.classList.contains('open')) loadVoices(); };
   document.body.appendChild(btn);
+})();
+</script>
+
+<!-- IMAGE GEN FINAL (SERVER PROXY) -->
+<script>
+(function(){
+  function extractPrompt(text){
+    var m = (text||'').trim().match(/^(image|img|photo|tasveer)\s*:\s*(.+)$/i);
+    return m ? m[2].trim() : null;
+  }
+  function makeImage(prompt, container){
+    container.innerHTML = '';
+    var status = document.createElement('div');
+    status.textContent = '🎨 VED paint kar raha hai... (10-30 sec, wait kar)';
+    status.style.cssText = 'color:#9aa4b2;font-size:13px;margin-bottom:6px';
+    var img = document.createElement('img');
+    img.alt = prompt;
+    img.style.cssText = 'max-width:100%;border-radius:12px;display:none;border:1px solid rgba(255,255,255,.12)';
+    img.onload = function(){ status.textContent = '✅ Ye le teri tasveer!'; img.style.display = 'block'; };
+    img.onerror = function(){ status.textContent = '❌ Failed. Dobara try kar.'; };
+    img.src = '/api/image/render?prompt=' + encodeURIComponent(prompt) + '&t=' + Date.now();
+    container.appendChild(status);
+    container.appendChild(img);
+  }
+  window.addEventListener('click', function(e){
+    var btn = e.target.closest('#sendBtn');
+    if(!btn) return;
+    var inp = document.getElementById('userInput');
+    if(!inp) return;
+    var prompt = extractPrompt(inp.value);
+    if(!prompt) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    inp.value = '';
+    var chat = document.getElementById('chatMessages');
+    if(!chat) return;
+    var u = document.createElement('div'); u.className = 'user-message'; u.textContent = '🎨 ' + prompt; chat.appendChild(u);
+    var b = document.createElement('div'); b.className = 'bot-message'; chat.appendChild(b);
+    makeImage(prompt, b);
+    chat.scrollTop = chat.scrollHeight;
+  }, true);
+  window.addEventListener('click', function(e){
+    var btn = e.target.closest('#imgGen');
+    if(!btn) return;
+    var inp = document.getElementById('imgPrompt');
+    if(!inp || !inp.value.trim()) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    var out = document.getElementById('imgOut');
+    if(!out) return;
+    makeImage(inp.value.trim(), out);
+  }, true);
 })();
 </script>
 </body>
