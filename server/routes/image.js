@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — IMAGE ENGINE v7 (UA HEADERS + 6 FALLBACKS)
+// VED AI — IMAGE ENGINE v8 (GEMINI NANO BANANA FIRST)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
@@ -8,6 +8,40 @@ module.exports = function() {
     const router = express.Router();
 
     const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+    let genai = null;
+    function getAI() {
+        if (genai) return genai;
+        const key = process.env.GEMINI_API_KEY;
+        if (!key) return null;
+        try {
+            const { GoogleGenAI } = require('@google/genai');
+            genai = new GoogleGenAI({ apiKey: key });
+        } catch (e) { genai = null; }
+        return genai;
+    }
+
+    async function geminiImage(prompt) {
+        const ai = getAI();
+        if (!ai) throw new Error('no gemini key');
+        const models = ['gemini-2.5-flash-image', 'gemini-2.0-flash-preview-image-generation'];
+        let lastErr = null;
+        for (const m of models) {
+            try {
+                const res = await ai.models.generateContent({
+                    model: m,
+                    contents: [{ parts: [{ text: prompt }], role: 'user' }]
+                });
+                const parts = res.candidates && res.candidates[0] && res.candidates[0].content && res.candidates[0].content.parts;
+                if (!parts) throw new Error('no parts');
+                for (const p of parts) {
+                    if (p.inlineData && p.inlineData.data) return Buffer.from(p.inlineData.data, 'base64');
+                }
+                throw new Error('no image part');
+            } catch (e) { lastErr = e; console.log('IMG gemini model fail:', m, '-', e.message); }
+        }
+        throw lastErr || new Error('gemini failed');
+    }
 
     async function hfRouter(prompt) {
         const key = process.env.HF_API_KEY;
@@ -28,20 +62,6 @@ module.exports = function() {
             return Buffer.from(await r2.arrayBuffer());
         }
         throw new Error('empty');
-    }
-
-    async function hfLegacy(prompt, model) {
-        const key = process.env.HF_API_KEY;
-        if (!key) throw new Error('no hf key');
-        const r = await fetch('https://api-inference.huggingface.co/models/' + model, {
-            method: 'POST',
-            headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', 'User-Agent': UA },
-            body: JSON.stringify({ inputs: prompt })
-        });
-        if (!r.ok) throw new Error('legacy ' + r.status);
-        const buf = Buffer.from(await r.arrayBuffer());
-        if (buf.length < 1000) throw new Error('legacy empty');
-        return buf;
     }
 
     async function pollinations(prompt, model) {
@@ -69,9 +89,8 @@ module.exports = function() {
         if (!prompt) return res.status(400).send('No prompt');
         let buf = null;
         const attempts = [
+            ['gemini-nano', function(){ return geminiImage(prompt); }],
             ['hf-router', function(){ return hfRouter(prompt); }],
-            ['hf-flux', function(){ return hfLegacy(prompt, 'black-forest-labs/FLUX.1-schnell'); }],
-            ['hf-sdxl', function(){ return hfLegacy(prompt, 'stabilityai/stable-diffusion-xl-base-1.0'); }],
             ['pol-flux', function(){ return pollinations(prompt, 'flux'); }],
             ['pol-turbo', function(){ return pollinations(prompt, 'turbo'); }],
             ['pol-default', function(){ return pollinations(prompt, null); }]
