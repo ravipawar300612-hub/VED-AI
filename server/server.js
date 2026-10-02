@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI SERVER v8.9 (GOOGLE SEARCH GROUNDING — FIXED)
+// VED AI SERVER v9.0 (IMAGE GEN INTEGRATED)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
@@ -15,7 +15,6 @@ const setupAuth = require("./auth");
 const { scanMessage } = require("./scamEngine");
 
 const app = express();
-app.use('/tts', require('./routes/tts')());
 
 // ===============================
 // ENVIRONMENT VALIDATION
@@ -141,7 +140,7 @@ function getGreetingResponse(message) {
 }
 
 // ===============================
-// 🔄 MODEL FALLBACK + GOOGLE SEARCH (v8.9 — CLEAN)
+// 🔄 MODEL FALLBACK + GOOGLE SEARCH
 // ===============================
 const MODEL_CHAIN = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
 
@@ -149,7 +148,6 @@ async function generateWithFallback(contents, useSearch = false) {
     let lastError = null;
 
     for (const model of MODEL_CHAIN) {
-        // 1️⃣ Pehle Google Search ke saath (SAHI syntax: config.tools)
         if (useSearch) {
             try {
                 console.log("🔍 " + model + " + Google Search...");
@@ -175,7 +173,6 @@ async function generateWithFallback(contents, useSearch = false) {
             }
         }
 
-        // 2️⃣ Bina search ke normal call
         try {
             const result = await ai.models.generateContent({ model: model, contents: contents });
             console.log("✅ Used model (no search):", model);
@@ -541,49 +538,6 @@ Message: "${suspiciousMessage}"`;
 });
 
 // ===============================
-// ELEVENLABS TTS ROUTE
-// ===============================
-app.post("/tts", async (req, res) => {
-    try {
-        const text = validateMessage(req.body.text);
-        if (!text) return res.status(400).json({ error: "Invalid text" });
-
-        const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-        if (!ELEVENLABS_API_KEY) return res.status(503).json({ error: "TTS unavailable" });
-
-        const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
-        const models = ["eleven_v3", "eleven_multilingual_v2"];
-
-        let audioBuffer = null;
-        for (const model of models) {
-            try {
-                const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-                    method: "POST",
-                    headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        text: text,
-                        model_id: model,
-                        voice_settings: { stability: 0.35, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true }
-                    })
-                });
-                if (response.ok) {
-                    audioBuffer = Buffer.from(await response.arrayBuffer());
-                    break;
-                }
-            } catch (err) {
-                console.warn("⚠️ TTS error:", model, err.message);
-            }
-        }
-
-        if (!audioBuffer) return res.status(500).json({ error: "TTS failed" });
-        res.set("Content-Type", "audio/mpeg");
-        res.send(audioBuffer);
-    } catch (error) {
-        res.status(500).json({ error: "TTS failed" });
-    }
-});
-
-// ===============================
 // CROP MODULE
 // ===============================
 let cropModule = null;
@@ -675,7 +629,6 @@ ${memoryBlock}`;
             }
         }
 
-        // 🆘 RESCUE MODE: streaming khaali raha to non-stream se jawab lao
         if (!fullText) {
             try {
                 console.log("🆘 Stream empty — non-stream fallback...");
@@ -715,13 +668,16 @@ ${memoryBlock}`;
 });
 
 // ===============================
-// AUTH + MISSIONS + START SERVER
+// ROUTE MOUNTS (TTS + MISSIONS + IMAGE)
 // ===============================
 setupAuth(app);
 app.use('/api/missions', require('./routes/missions')());
 app.use('/tts', require('./routes/tts')());
 app.use('/api/image', require('./routes/image')());
 
+// ===============================
+// START SERVER
+// ===============================
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
     console.log(`🚀 VED AI Server Running on Port ${PORT}`);
