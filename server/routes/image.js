@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — IMAGE ENGINE FINAL (MULTI-FALLBACK)
+// VED AI — IMAGE ENGINE v7 (UA HEADERS + 6 FALLBACKS)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
@@ -7,12 +7,14 @@ const express = require('express');
 module.exports = function() {
     const router = express.Router();
 
+    const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
     async function hfRouter(prompt) {
         const key = process.env.HF_API_KEY;
         if (!key) throw new Error('no hf key');
         const r = await fetch('https://router.huggingface.co/v1/images/generations', {
             method: 'POST',
-            headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+            headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', 'User-Agent': UA },
             body: JSON.stringify({ model: 'black-forest-labs/FLUX.1-schnell', prompt: prompt })
         });
         if (!r.ok) throw new Error('router ' + r.status);
@@ -21,7 +23,7 @@ module.exports = function() {
         if (!item) throw new Error('no data');
         if (item.b64_json) return Buffer.from(item.b64_json, 'base64');
         if (item.url) {
-            const r2 = await fetch(item.url);
+            const r2 = await fetch(item.url, { headers: { 'User-Agent': UA } });
             if (!r2.ok) throw new Error('img url fail');
             return Buffer.from(await r2.arrayBuffer());
         }
@@ -33,7 +35,7 @@ module.exports = function() {
         if (!key) throw new Error('no hf key');
         const r = await fetch('https://api-inference.huggingface.co/models/' + model, {
             method: 'POST',
-            headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+            headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', 'User-Agent': UA },
             body: JSON.stringify({ inputs: prompt })
         });
         if (!r.ok) throw new Error('legacy ' + r.status);
@@ -42,10 +44,11 @@ module.exports = function() {
         return buf;
     }
 
-    async function pollinations(prompt) {
-        const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=768&height=768&nologo=true&seed=' + Date.now();
-        const r = await fetch(url);
-        if (!r.ok) throw new Error('pollinations ' + r.status);
+    async function pollinations(prompt, model) {
+        let url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=768&height=768&nologo=true&seed=' + Date.now();
+        if (model) url += '&model=' + model;
+        const r = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'image/*,*/*;q=0.8' } });
+        if (!r.ok) throw new Error('pollinations(' + (model || 'default') + ') ' + r.status);
         const buf = Buffer.from(await r.arrayBuffer());
         if (buf.length < 1000) throw new Error('pollinations empty');
         return buf;
@@ -66,14 +69,19 @@ module.exports = function() {
         if (!prompt) return res.status(400).send('No prompt');
         let buf = null;
         const attempts = [
-            function(){ return hfRouter(prompt); },
-            function(){ return hfLegacy(prompt, 'black-forest-labs/FLUX.1-schnell'); },
-            function(){ return hfLegacy(prompt, 'stabilityai/stable-diffusion-xl-base-1.0'); },
-            function(){ return pollinations(prompt); }
+            ['hf-router', function(){ return hfRouter(prompt); }],
+            ['hf-flux', function(){ return hfLegacy(prompt, 'black-forest-labs/FLUX.1-schnell'); }],
+            ['hf-sdxl', function(){ return hfLegacy(prompt, 'stabilityai/stable-diffusion-xl-base-1.0'); }],
+            ['pol-flux', function(){ return pollinations(prompt, 'flux'); }],
+            ['pol-turbo', function(){ return pollinations(prompt, 'turbo'); }],
+            ['pol-default', function(){ return pollinations(prompt, null); }]
         ];
-        for (const fn of attempts) {
-            try { buf = await fn(); if (buf && buf.length > 1000) break; buf = null; }
-            catch (e) { console.log('IMG fallback:', e.message); }
+        for (const a of attempts) {
+            try {
+                buf = await a[1]();
+                if (buf && buf.length > 1000) { console.log('IMG OK via', a[0]); break; }
+                buf = null;
+            } catch (e) { console.log('IMG fallback:', a[0], '-', e.message); }
         }
         if (!buf) {
             res.setHeader('Content-Type', 'image/svg+xml');
