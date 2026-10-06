@@ -118,19 +118,28 @@ const SpeechEngine = (function () {
     function stopCurrentAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } stopSimulatedWave(); }
 
     // ---------- AUDIO QUEUE ----------
+    function getPreferredVoiceId() {
+        const saved = localStorage.getItem('vedVoice');
+        if (saved && String(saved).trim()) return saved;
+        return '21m00Tcm4TlvDq8ikWAM';
+    }
+
     function playText(text, cb) {
-          const savedVoice = localStorage.getItem('vedVoice') || 'pNInz6obpgDQGcFmaJgB';
-        fetch("/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text, voice: savedVoice }) })
+        if (!text || !String(text).trim()) { next(); return; }
+        const safeText = cleanTextForSpeech(String(text));
+        if (!safeText) { next(); return; }
+        const savedVoice = getPreferredVoiceId();
+        fetch("/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: safeText, voice: savedVoice }) })
             .then(function (r) { if (!r.ok) throw new Error("TTS " + r.status); return r.blob(); })
             .then(function (blob) {
                 const url = URL.createObjectURL(blob);
                 currentAudio = new Audio(url);
                 currentAudio.onplay = function () { startSimulatedWave(cb.onAmplitude); if (cb.onStart) cb.onStart(); };
                 currentAudio.onended = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; next(); };
-                currentAudio.onerror = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; browserSpeak(text, cb); };
+                currentAudio.onerror = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; browserSpeak(safeText, cb); };
                 return currentAudio.play();
             })
-            .catch(function () { browserSpeak(text, cb); });
+            .catch(function () { browserSpeak(safeText, cb); });
     }
 
     function browserSpeak(text, cb) {
@@ -207,7 +216,7 @@ const SpeechEngine = (function () {
         const saved = localStorage.getItem("vedPreferredVoice");
         let voice = voices.find(function (v) { return v.voiceURI === saved; });
         if (!voice) {
-            voice = voices.find(function (v) { return v.name === "Google US English"; }) ||
+            voice = voices.find(function (v) { return /Google (UK|US) English|Samantha|Aria|Microsoft Emma|Microsoft Zira|Female/i.test(v.name); }) ||
                     voices.find(function (v) { return v.lang === "en-IN"; }) ||
                     voices.find(function (v) { return v.lang === "en-US"; }) ||
                     voices.find(function (v) { return v.lang.startsWith("en"); }) ||
