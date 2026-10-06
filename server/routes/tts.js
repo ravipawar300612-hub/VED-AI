@@ -1,9 +1,6 @@
 // ==========================================
-// VED AI — VOICE CORE v10 (PERMANENT / SELF-HEALING)
+// VED AI — TTS ENGINE v14 (ORIGINAL VOICES + FAST)
 // Founder: Sayali P. R. Pawar
-// ------------------------------------------
-// CONFIG: future mein kuch badalna ho to SIRF
-// yahan badlo. Poori voice system isi se chalti hai.
 // ==========================================
 const express = require('express');
 
@@ -13,7 +10,12 @@ const CONFIG = {
         { id: '21m00Tcm4TlvDq8ikWAM', name: 'VANI (Female)' }
     ],
     models: ['eleven_turbo_v2_5', 'eleven_multilingual_v2', 'eleven_flash_v2_5'],
-    settings: { stability: 0.5, similarity_boost: 0.85, style: 0.2, use_speaker_boost: true },
+    settings: { 
+        stability: 0.5,
+        similarity_boost: 0.85,
+        style: 0.2,
+        use_speaker_boost: true 
+    },
     maxText: 2500
 };
 
@@ -60,10 +62,6 @@ module.exports = function() {
         res.json({ voices: CONFIG.voices.concat(clonedCache) });
     });
 
-    router.get('/health', (req, res) => {
-        res.json({ ok: true, model: lastGoodModel || CONFIG.models[0], voices: CONFIG.voices.length + clonedCache.length });
-    });
-
     router.post('/', async (req, res) => {
         const body = await getBody(req);
         const text = String(body.text || '').trim();
@@ -92,9 +90,8 @@ module.exports = function() {
                     lastGoodModel = model;
                     break;
                 }
-                console.warn('VOICE CORE: model fail', model, response.status);
             } catch (e) {
-                console.warn('VOICE CORE: model error', model, e.message);
+                console.warn('TTS error:', model, e.message);
             }
         }
 

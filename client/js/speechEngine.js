@@ -35,7 +35,7 @@ const SpeechEngine = (function () {
     const isSupported = !!SpeechRecognitionAPI;
     let currentCallbacks = null;
 
-    function cleanTextForSpeech(text) {
+        function cleanTextForSpeech(text) {
         return String(text)
             .replace(/#{1,6}\s*/g, "")
             .replace(/\*\*([^*]+)\*\*/g, "$1")

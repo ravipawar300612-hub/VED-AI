@@ -364,6 +364,9 @@ CRITICAL ACCURACY RULE:
 - Always provide accurate, up-to-date information
 ${langLine}${toneLine}
 
+${memoryBlock}
+${langLine}${toneLine}
+
 ${memoryBlock}`;
 
         const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory];
