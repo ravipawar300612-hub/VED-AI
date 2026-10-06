@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE v3 (STABLE + STREAMING QUEUE)
+// VED AI — SPEECH ENGINE v11 (PERMANENT: PREFETCH + CACHE + BATCH)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const SpeechEngine = (function () {
@@ -16,6 +16,14 @@ const SpeechEngine = (function () {
     let endedFired = false;
     let simulatedLoopId = null;
     let speakCb = {};
+    
+    // PREFETCH: Next 2 sentences ko pehle se TTS call karo
+    let prefetchQueue = [];
+    const PREFETCH_COUNT = 2;
+    
+    // CACHE: Short common phrases ko store karo
+    const audioCache = new Map();
+    const CACHE_MAX_SIZE = 50;
 
     if (SpeechRecognitionAPI) {
         recognition = new SpeechRecognitionAPI();
@@ -108,7 +116,7 @@ const SpeechEngine = (function () {
         currentCallbacks = null;
     }
 
-    // ---------- WAVE (sirf visuals, koi interrupt logic nahi) ----------
+    // ---------- WAVE (sirf visuals) ----------
     function startSimulatedWave(onAmplitude) {
         if (!onAmplitude) return;
         stopSimulatedWave();
@@ -117,29 +125,47 @@ const SpeechEngine = (function () {
     function stopSimulatedWave() { if (simulatedLoopId) clearInterval(simulatedLoopId); simulatedLoopId = null; }
     function stopCurrentAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } stopSimulatedWave(); }
 
-    // ---------- AUDIO QUEUE ----------
-    function getPreferredVoiceId() {
-        const saved = localStorage.getItem('vedVoice');
-        if (saved && String(saved).trim()) return saved;
-        return '21m00Tcm4TlvDq8ikWAM';
+    // ---------- AUDIO QUEUE + PREFETCH ----------
+    function fetchTTS(text) {
+        // CACHE CHECK: Short phrases cache se lao
+        if (text.length < 50 && audioCache.has(text)) {
+            return Promise.resolve(audioCache.get(text));
+        }
+        
+        const savedVoice = localStorage.getItem('vedVoice') || 'pNInz6obpgDQGcFmaJgB';
+        return fetch("/tts", { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify({ text: text, voice: savedVoice }) 
+        })
+        .then(function (r) { 
+            if (!r.ok) throw new Error("TTS " + r.status); 
+            return r.blob(); 
+        })
+        .then(function (blob) {
+            // CACHE STORE: Short phrases save karo
+            if (text.length < 50) {
+                if (audioCache.size >= CACHE_MAX_SIZE) {
+                    const firstKey = audioCache.keys().next().value;
+                    audioCache.delete(firstKey);
+                }
+                audioCache.set(text, blob);
+            }
+            return blob;
+        });
     }
 
     function playText(text, cb) {
-        if (!text || !String(text).trim()) { next(); return; }
-        const safeText = cleanTextForSpeech(String(text));
-        if (!safeText) { next(); return; }
-        const savedVoice = getPreferredVoiceId();
-        fetch("/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: safeText, voice: savedVoice }) })
-            .then(function (r) { if (!r.ok) throw new Error("TTS " + r.status); return r.blob(); })
+        fetchTTS(text)
             .then(function (blob) {
                 const url = URL.createObjectURL(blob);
                 currentAudio = new Audio(url);
                 currentAudio.onplay = function () { startSimulatedWave(cb.onAmplitude); if (cb.onStart) cb.onStart(); };
                 currentAudio.onended = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; next(); };
-                currentAudio.onerror = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; browserSpeak(safeText, cb); };
+                currentAudio.onerror = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; browserSpeak(text, cb); };
                 return currentAudio.play();
             })
-            .catch(function () { browserSpeak(safeText, cb); });
+            .catch(function () { browserSpeak(text, cb); });
     }
 
     function browserSpeak(text, cb) {
@@ -147,6 +173,8 @@ const SpeechEngine = (function () {
         const u = new SpeechSynthesisUtterance(text);
         const v = pickBestVoice();
         if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "en-IN";
+        u.rate = 1.0;
+        u.pitch = 1.0;
         u.onstart = function () { startSimulatedWave(cb.onAmplitude); if (cb.onStart) cb.onStart(); };
         u.onend = function () { stopSimulatedWave(); next(); };
         u.onerror = function () { stopSimulatedWave(); next(); };
@@ -173,21 +201,33 @@ const SpeechEngine = (function () {
         playText(audioQueue.shift(), speakCb);
     }
 
-    // ---------- STREAM API (sentence-by-sentence) ----------
+    // ---------- STREAM API (sentence-by-sentence + PREFETCH) ----------
     function speakStreamBegin(cb) {
         cancelSpeaking();
         speakCb = cb || {};
         streamOpen = true;
         endedFired = false;
         audioQueue = [];
+        prefetchQueue = [];
         isPlaying = false;
     }
+    
     function speakStreamPush(sentence) {
         const s = cleanTextForSpeech(sentence);
         if (!s) return;
+        
         audioQueue.push(s);
+        
+        // PREFETCH: Next sentences ko pehle se fetch karo
+        if (prefetchQueue.length < PREFETCH_COUNT) {
+            const prefetchText = s;
+            prefetchQueue.push(prefetchText);
+            fetchTTS(prefetchText).catch(function () {}); // Fire and forget
+        }
+        
         processQueue();
     }
+    
     function speakStreamEnd() {
         streamOpen = false;
         maybeFinish();
@@ -204,6 +244,7 @@ const SpeechEngine = (function () {
     function cancelSpeaking() {
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         audioQueue = [];
+        prefetchQueue = [];
         stopCurrentAudio();
         isPlaying = false;
         streamOpen = false;
@@ -216,7 +257,7 @@ const SpeechEngine = (function () {
         const saved = localStorage.getItem("vedPreferredVoice");
         let voice = voices.find(function (v) { return v.voiceURI === saved; });
         if (!voice) {
-            voice = voices.find(function (v) { return /Google (UK|US) English|Samantha|Aria|Microsoft Emma|Microsoft Zira|Female/i.test(v.name); }) ||
+            voice = voices.find(function (v) { return v.name === "Google US English"; }) ||
                     voices.find(function (v) { return v.lang === "en-IN"; }) ||
                     voices.find(function (v) { return v.lang === "en-US"; }) ||
                     voices.find(function (v) { return v.lang.startsWith("en"); }) ||
