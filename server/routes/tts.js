@@ -128,6 +128,16 @@ module.exports = function() {
             for (let attempt = 0; attempt < 2 && !buf; attempt++) {
                 try { buf = await geminiTTS(text, voiceId.slice(7), mood); }
                 catch (e) { console.warn('VOICE CORE: gemini attempt fail:', e.message); await sleep(700); }
+                                try { 
+                    buf = await geminiTTS(text, voiceId.slice(7), mood); 
+                } catch (e) { 
+                    console.warn('VOICE CORE: gemini attempt fail:', e.message); 
+                    // Agar quota khatam hai (429 error), toh turant frontend ko bata do
+                    if (e.message && (e.message.includes('429') || e.message.includes('quota') || e.message.includes('rate'))) {
+                        return res.status(429).send('Gemini quota exceeded');
+                    }
+                    await sleep(700); 
+                }
             }
             if (buf) {
                 if (u) utterLock.set(u, { engine: 'gemini', ts: Date.now() });
