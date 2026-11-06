@@ -1,31 +1,36 @@
 // ==========================================
-// VED AI — VOICE CORE v16 (GEMINI FREE + ELEVEN FALLBACK)
+// VED AI — VOICE CORE v17 (VOICE LOCK + GEMINI-ONLY PUBLIC)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
 
 const CONFIG = {
     geminiVoices: [
-        { id: 'gemini:Sulafat', name: 'VED ♀ Warm (Gemini FREE)' },
-        { id: 'gemini:Leda', name: 'VED ♀ Youthful (Gemini FREE)' },
-        { id: 'gemini:Aoede', name: 'VED ♀ Breezy (Gemini FREE)' },
-        { id: 'gemini:Achird', name: 'VED ♂ Friendly (Gemini FREE)' },
-        { id: 'gemini:Algieba', name: 'VED ♂ Smooth (Gemini FREE)' },
-        { id: 'gemini:Zephyr', name: 'VED ♀ Bright (Gemini FREE)' }
+        { id: 'gemini:Sulafat', name: '♀ Warm (Sulafat)' },
+        { id: 'gemini:Leda', name: '♀ Youthful (Leda)' },
+        { id: 'gemini:Aoede', name: '♀ Breezy (Aoede)' },
+        { id: 'gemini:Achird', name: '♂ Friendly (Achird)' },
+        { id: 'gemini:Algieba', name: '♂ Smooth (Algieba)' },
+        { id: 'gemini:Zephyr', name: '♀ Bright (Zephyr)' }
     ],
-    voices: [
-        { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh (Eleven)' },
-        { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Eleven)' }
-    ],
+    elevenDefault: 'TxGEqnHWrfWFTfGW9XjX',
     models: ['eleven_turbo_v2_5', 'eleven_multilingual_v2', 'eleven_flash_v2_5'],
     settings: { stability: 0.45, similarity_boost: 0.82, style: 0.25, use_speaker_boost: true },
     stylePrefix: 'Say in a warm, friendly and natural tone, like a caring young friend: ',
     maxText: 2500
 };
 
+// UTTERANCE LOCK: ek reply = ek engine, kabhi mix nahi
+const utterLock = new Map();
+setInterval(function () {
+    const now = Date.now();
+    utterLock.forEach(function (v, k) { if (now - v.ts > 180000) utterLock.delete(k); });
+}, 60000);
+
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
 module.exports = function() {
     const router = express.Router();
-    let extraVoices = [];
     let lastGoodModel = null;
     let genai = null;
 
@@ -80,19 +85,6 @@ module.exports = function() {
         return list;
     }
 
-    async function refreshExtras() {
-        const key = process.env.ELEVENLABS_API_KEY;
-        if (!key) return;
-        try {
-            const r = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': key } });
-            if (!r.ok) return;
-            const d = await r.json();
-            extraVoices = (d.voices || [])
-                .filter(function (v) { return !CONFIG.voices.some(function (c) { return c.id === v.voice_id; }); })
-                .map(function (v) { return { id: v.voice_id, name: v.name + ' (Eleven)' }; });
-        } catch (e) { /* silent */ }
-    }
-
     function getBody(req) {
         return new Promise(function (resolve) {
             if (req.body && Object.keys(req.body).length) return resolve(req.body);
@@ -104,58 +96,70 @@ module.exports = function() {
         });
     }
 
-    router.get('/voices', async (req, res) => {
-        await refreshExtras();
-        res.json({ voices: CONFIG.geminiVoices.concat(CONFIG.voices).concat(extraVoices) });
+    // PUBLIC LIST: sirf FREE Gemini voices
+    router.get('/voices', (req, res) => {
+        res.json({ voices: CONFIG.geminiVoices });
     });
 
     router.post('/', async (req, res) => {
         const body = await getBody(req);
         const text = String(body.text || '').trim();
         let voiceId = String(body.voice || '');
+        const u = String(body.u || '');
 
         if (!text) return res.status(400).send('No text');
         if (text.length > CONFIG.maxText) return res.status(400).send('Text too long');
 
-        const allVoices = CONFIG.geminiVoices.concat(CONFIG.voices).concat(extraVoices);
-        const known = allVoices.some(function (v) { return v.id === voiceId; });
+        const known = CONFIG.geminiVoices.some(function (v) { return v.id === voiceId; });
         if (!known) voiceId = CONFIG.geminiVoices[0].id;
 
-        // ENGINE 1: GEMINI (FREE)
-        if (voiceId.indexOf('gemini:') === 0) {
-            try {
-                const buf = await geminiTTS(text, voiceId.slice(7));
-                res.setHeader('Content-Type', 'audio/wav');
-                return res.send(buf);
-            } catch (e) {
-                console.warn('VOICE CORE: gemini fail -> eleven fallback:', e.message);
-                voiceId = CONFIG.voices[0].id;
+        // LOCK CHECK: is reply ka engine pehle se decide hai?
+        const lock = u ? utterLock.get(u) : null;
+        let engine = lock ? lock.engine : 'gemini';
+        let buf = null;
+
+        if (engine === 'gemini') {
+            for (let attempt = 0; attempt < 2 && !buf; attempt++) {
+                try { buf = await geminiTTS(text, voiceId.slice(7)); }
+                catch (e) { console.warn('VOICE CORE: gemini attempt fail:', e.message); await sleep(700); }
+            }
+            if (buf) {
+                if (u) utterLock.set(u, { engine: 'gemini', ts: Date.now() });
+            } else if (u && lock) {
+                return res.status(500).send('Gemini locked, no mixing');
+            } else if (u && !lock) {
+                engine = 'eleven';
+                utterLock.set(u, { engine: 'eleven', ts: Date.now() });
+            } else {
+                engine = 'eleven';
             }
         }
 
-        // ENGINE 2: ELEVENLABS (fallback)
-        const key = process.env.ELEVENLABS_API_KEY;
-        if (!key) return res.status(500).send('No TTS engine available');
-
-        let audioBuffer = null;
-        for (const model of modelOrder()) {
-            try {
-                const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
-                    method: 'POST',
-                    headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
-                    body: JSON.stringify({ text: text, model_id: model, voice_settings: CONFIG.settings })
-                });
-                if (response.ok) {
-                    audioBuffer = Buffer.from(await response.arrayBuffer());
-                    lastGoodModel = model;
-                    break;
+        if (!buf && engine === 'eleven') {
+            const key = process.env.ELEVENLABS_API_KEY;
+            if (key) {
+                for (const model of modelOrder()) {
+                    try {
+                        const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + CONFIG.elevenDefault, {
+                            method: 'POST',
+                            headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+                            body: JSON.stringify({ text: text, model_id: model, voice_settings: CONFIG.settings })
+                        });
+                        if (response.ok) {
+                            buf = Buffer.from(await response.arrayBuffer());
+                            lastGoodModel = model;
+                            if (u) utterLock.set(u, { engine: 'eleven', ts: Date.now() });
+                            break;
+                        }
+                    } catch (e) { /* next */ }
                 }
-            } catch (e) { /* next model */ }
+            }
         }
 
-        if (!audioBuffer) return res.status(500).send('TTS failed');
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.send(audioBuffer);
+        if (!buf) return res.status(500).send('TTS failed');
+        res.setHeader('Content-Type', engine === 'gemini' ? 'audio/wav' : 'audio/mpeg');
+        res.setHeader('X-VED-Engine', engine);
+        res.send(buf);
     });
 
     return router;

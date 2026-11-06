@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE v11 (PERMANENT: PREFETCH + CACHE + BATCH)
+// VED AI — SPEECH ENGINE v18 (VOICE LOCK + CHUNK MERGE)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const SpeechEngine = (function () {
@@ -16,12 +16,13 @@ const SpeechEngine = (function () {
     let endedFired = false;
     let simulatedLoopId = null;
     let speakCb = {};
-    
-    // PREFETCH: Next 2 sentences ko pehle se TTS call karo
-    let prefetchQueue = [];
-    const PREFETCH_COUNT = 2;
-    
-    // CACHE: Short common phrases ko store karo
+
+    // VOICE LOCK: poori reply ek hi awaaz mein
+    let activeVoice = null;
+    let utteranceId = null;
+    let chunkBuf = '';
+    let chunkSent = 0;
+
     const audioCache = new Map();
     const CACHE_MAX_SIZE = 50;
 
@@ -40,11 +41,11 @@ const SpeechEngine = (function () {
             .replace(/#{1,6}\s*/g, "")
             .replace(/\*\*([^*]+)\*\*/g, "$1")
             .replace(/\*([^*]+)\*/g, "$1")
-            .replace(/```[\s\S]*?```/g, " code block ")
+            .replace(/```[\s\S]*?```/g, " ")
             .replace(/`([^`]+)`/g, "$1")
             .replace(/^[-*]\s+/gm, "")
             .replace(/^\d+\.\s+/gm, "")
-            .replace(/https?:\/\/\S+/g, " link ")
+            .replace(/https?:\/\/\S+/g, " ")
             .replace(/📎\s?Sources?:[^\n]*/g, " ")
             .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
             .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2764}]/gu, "")
@@ -118,7 +119,7 @@ const SpeechEngine = (function () {
         currentCallbacks = null;
     }
 
-    // ---------- WAVE (sirf visuals) ----------
+    // ---------- WAVE ----------
     function startSimulatedWave(onAmplitude) {
         if (!onAmplitude) return;
         stopSimulatedWave();
@@ -127,31 +128,28 @@ const SpeechEngine = (function () {
     function stopSimulatedWave() { if (simulatedLoopId) clearInterval(simulatedLoopId); simulatedLoopId = null; }
     function stopCurrentAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } stopSimulatedWave(); }
 
-    // ---------- AUDIO QUEUE + PREFETCH ----------
+    // ---------- TTS FETCH (LOCKED VOICE + CACHE) ----------
     function fetchTTS(text) {
-        // CACHE CHECK: Short phrases cache se lao
-        if (text.length < 50 && audioCache.has(text)) {
-            return Promise.resolve(audioCache.get(text));
-        }
-        
-        const savedVoice = localStorage.getItem('vedVoice') || 'gemini:Sulafat';
-        return fetch("/tts", { 
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify({ text: text, voice: savedVoice }) 
+        const voice = activeVoice || localStorage.getItem('vedVoice') || 'gemini:Sulafat';
+        const cacheKey = voice + '|' + text;
+        if (audioCache.has(cacheKey)) return Promise.resolve(audioCache.get(cacheKey));
+
+        return fetch("/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: text, voice: voice, u: utteranceId || '' })
         })
-        .then(function (r) { 
-            if (!r.ok) throw new Error("TTS " + r.status); 
-            return r.blob(); 
+        .then(function (r) {
+            if (!r.ok) throw new Error("TTS " + r.status);
+            return r.blob();
         })
         .then(function (blob) {
-            // CACHE STORE: Short phrases save karo
-            if (text.length < 50) {
+            if (text.length < 60) {
                 if (audioCache.size >= CACHE_MAX_SIZE) {
                     const firstKey = audioCache.keys().next().value;
                     audioCache.delete(firstKey);
                 }
-                audioCache.set(text, blob);
+                audioCache.set(cacheKey, blob);
             }
             return blob;
         });
@@ -159,6 +157,7 @@ const SpeechEngine = (function () {
 
     function playText(text, cb) {
         fetchTTS(text)
+            .catch(function () { return fetchTTS(text); }) // ek retry
             .then(function (blob) {
                 const url = URL.createObjectURL(blob);
                 currentAudio = new Audio(url);
@@ -203,34 +202,43 @@ const SpeechEngine = (function () {
         playText(audioQueue.shift(), speakCb);
     }
 
-    // ---------- STREAM API (sentence-by-sentence + PREFETCH) ----------
+    function enqueueChunk(t) {
+        audioQueue.push(t);
+        fetchTTS(t).catch(function () {});
+        processQueue();
+    }
+
+    // ---------- STREAM API ----------
     function speakStreamBegin(cb) {
         cancelSpeaking();
         speakCb = cb || {};
         streamOpen = true;
         endedFired = false;
         audioQueue = [];
-        prefetchQueue = [];
-        isPlaying = false;
+        chunkBuf = '';
+        chunkSent = 0;
+        // LOCK: ab se poori reply isi awaaz mein
+        activeVoice = localStorage.getItem('vedVoice') || 'gemini:Sulafat';
+        utteranceId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
-    
+
     function speakStreamPush(sentence) {
         const s = cleanTextForSpeech(sentence);
         if (!s) return;
-        
-        audioQueue.push(s);
-        
-        // PREFETCH: Next sentences ko pehle se fetch karo
-        if (prefetchQueue.length < PREFETCH_COUNT) {
-            const prefetchText = s;
-            prefetchQueue.push(prefetchText);
-            fetchTTS(prefetchText).catch(function () {}); // Fire and forget
+        if (chunkSent === 0) {
+            chunkSent = 1;
+            enqueueChunk(s); // pehla sentence turant (fast start)
+        } else {
+            chunkBuf = chunkBuf ? chunkBuf + ' ' + s : s;
+            if (chunkBuf.length >= 150) {
+                enqueueChunk(chunkBuf);
+                chunkBuf = '';
+            }
         }
-        
-        processQueue();
     }
-    
+
     function speakStreamEnd() {
+        if (chunkBuf) { enqueueChunk(chunkBuf); chunkBuf = ''; }
         streamOpen = false;
         maybeFinish();
     }
@@ -239,14 +247,14 @@ const SpeechEngine = (function () {
         speakStreamBegin(cb);
         const parts = splitIntoSentences(text);
         if (parts.length === 0) { speakStreamEnd(); return; }
-        parts.forEach(function (s) { audioQueue.push(s); });
-        processQueue();
+        parts.forEach(function (s) { speakStreamPush(s); });
+        speakStreamEnd();
     }
 
     function cancelSpeaking() {
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         audioQueue = [];
-        prefetchQueue = [];
+        chunkBuf = '';
         stopCurrentAudio();
         isPlaying = false;
         streamOpen = false;
