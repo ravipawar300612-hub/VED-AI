@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE v20 (UNLIMITED FALLBACK + SMART VOICES)
+// VED AI — SPEECH ENGINE v22 (CRASH-PROOF + SINGLE-POST + EMOTION)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const SpeechEngine = (function () {
@@ -21,20 +21,21 @@ const SpeechEngine = (function () {
     let utteranceId = null;
     let chunkBuf = '';
     let chunkSent = 0;
-    let apiFailed = false; // Agar API fail ho jaye, toh seedha browser voice use karo
+    let apiFailed = false;
 
     const audioCache = new Map();
+    const pendingFetch = new Map();
     const CACHE_MAX_SIZE = 50;
 
     const EMOTION_RULES = {
-        happy: /\b(great|amazing|wonderful|fantastic|awesome|excellent|brilliant|perfect|congrats|congratulations|yay|hooray|hurray|wow|🎉|✨|❤️|💯|shandar|badhiya|zabardast|mast|kamaal|wah|khushi|mubarak|good news)\b/i,
-        sad: /\b(sorry|sad|unfortunately|regret|loss|miss|pain|heart|😢|😭|🥺|💔|dukhi|afsos|mazrat|chinta|takleef|dukh|problem)\b/i,
-        playful: /\b(haha|lol|😂|🤣|funny|joke|mazak|masti|mazedaar|hasi|mazze|chill|cool|😏|😉)\b/i,
-        serious: /\b(important|serious|urgent|danger|warning|careful|dhyan|zaroori|gambheer|sawdhan|alert|critical|crucial|samjho)\b/i
+        happy: /(great|amazing|wonderful|fantastic|awesome|excellent|brilliant|perfect|congrats|congratulations|yay|hooray|hurray|wow|shandar|badhiya|zabardast|mast|kamaal|wah|khushi|mubarak|good news|🎉|✨|❤️|💯)/i,
+        sad: /(sorry|sad|unfortunately|regret|loss|miss you|pain|heartbreak|dukhi|afsos|mazrat|chinta|takleef|dukh|😢|😭|🥺)/i,
+        playful: /(haha|lol|funny|joke|mazak|masti|mazedaar|hasi|mazze|chill|cool|😂|🤣|😉)/i,
+        serious: /(important|serious|urgent|danger|warning|careful|dhyan|zaroori|gambheer|sawdhan|alert|critical|crucial|samjho)/i
     };
 
     function detectMood(text) {
-        const t = String(text).toLowerCase();
+        const t = String(text);
         for (const mood in EMOTION_RULES) {
             if (EMOTION_RULES[mood].test(t)) return mood;
         }
@@ -143,28 +144,29 @@ const SpeechEngine = (function () {
     function stopSimulatedWave() { if (simulatedLoopId) clearInterval(simulatedLoopId); simulatedLoopId = null; }
     function stopCurrentAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } stopSimulatedWave(); }
 
-    // ---------- TTS FETCH ----------
+    // ---------- TTS FETCH (SINGLE POST PER CHUNK — quota 2x bachega) ----------
     function fetchTTS(text, mood) {
-        if (apiFailed) return Promise.reject(new Error("API blocked, using browser")); // Seedha browser pe bhejo
-
+        if (apiFailed) return Promise.reject(new Error("API blocked, using browser"));
         const voice = activeVoice || localStorage.getItem('vedVoice') || 'gemini:Sulafat';
         const cacheKey = voice + '|' + mood + '|' + text;
         if (audioCache.has(cacheKey)) return Promise.resolve(audioCache.get(cacheKey));
+        if (pendingFetch.has(cacheKey)) return pendingFetch.get(cacheKey);
 
-        return fetch("/tts", {
+        const p = fetch("/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: text, voice: voice, mood: mood, u: utteranceId || '' })
         })
         .then(function (r) {
             if (r.status === 429 || r.status === 500) {
-                apiFailed = true; // Quota khatam! Aage se API call hi mat karo
+                apiFailed = true;
                 throw new Error("Quota exceeded or Server Error");
             }
             if (!r.ok) throw new Error("TTS " + r.status);
             return r.blob();
         })
         .then(function (blob) {
+            pendingFetch.delete(cacheKey);
             if (text.length < 60) {
                 if (audioCache.size >= CACHE_MAX_SIZE) {
                     const firstKey = audioCache.keys().next().value;
@@ -173,7 +175,14 @@ const SpeechEngine = (function () {
                 audioCache.set(cacheKey, blob);
             }
             return blob;
+        })
+        .catch(function (e) {
+            pendingFetch.delete(cacheKey);
+            throw e;
         });
+
+        pendingFetch.set(cacheKey, p);
+        return p;
     }
 
     function playText(text, mood, cb) {
@@ -183,36 +192,38 @@ const SpeechEngine = (function () {
                 currentAudio = new Audio(url);
                 currentAudio.onplay = function () { startSimulatedWave(cb.onAmplitude); if (cb.onStart) cb.onStart(); };
                 currentAudio.onended = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; next(); };
-                currentAudio.onerror = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; browserSpeak(text, cb); };
+                currentAudio.onerror = function () { stopSimulatedWave(); URL.revokeObjectURL(url); currentAudio = null; browserSpeak(text, mood, cb); };
                 return currentAudio.play();
             })
-            .catch(function (err) { 
-                console.warn("⚠️ API TTS fail, switching to Unlimited Browser Voice:", err.message);
-                browserSpeak(text, cb); // THE HERO FALLBACK!
+            .catch(function (err) {
+                console.warn("⚠️ API TTS fail, browser voice:", err.message);
+                browserSpeak(text, mood, cb);
             });
     }
 
-    // ---------- SMART BROWSER VOICE (Unlimited & Free) ----------
-    function browserSpeak(text, cb) {
-        if (!window.speechSynthesis) { next(); return; }
-        const u = new SpeechSynthesisUtterance(text);
-        const v = pickBestVoice();
-        if (v) { 
-            u.voice = v; 
-            u.lang = v.lang; 
-        } else {
-            u.lang = "hi-IN"; // Default Hindi
-        }
-        
-        // Mood ke hisaab se pitch/speed adjust karo
-        if (mood === 'happy' || mood === 'playful') { u.pitch = 1.1; u.rate = 1.05; }
-        else if (mood === 'sad' || mood === 'serious') { u.pitch = 0.9; u.rate = 0.95; }
-        else { u.pitch = 1.0; u.rate = 1.0; }
+    // ---------- BROWSER FALLBACK (mood FIXED + crash-proof) ----------
+    function browserSpeak(text, mood, cb) {
+        cb = cb || {};
+        mood = mood || 'neutral';
+        try {
+            if (!window.speechSynthesis) { next(); return; }
+            const u = new SpeechSynthesisUtterance(text);
+            const v = pickBestVoice();
+            if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "hi-IN"; }
 
-        u.onstart = function () { startSimulatedWave(cb.onAmplitude); if (cb.onStart) cb.onStart(); };
-        u.onend = function () { stopSimulatedWave(); next(); };
-        u.onerror = function () { stopSimulatedWave(); next(); };
-        window.speechSynthesis.speak(u);
+            if (mood === 'happy' || mood === 'playful') { u.pitch = 1.1; u.rate = 1.05; }
+            else if (mood === 'sad' || mood === 'serious') { u.pitch = 0.9; u.rate = 0.95; }
+            else { u.pitch = 1.0; u.rate = 1.0; }
+
+            u.onstart = function () { startSimulatedWave(cb.onAmplitude); if (cb.onStart) cb.onStart(); };
+            u.onend = function () { stopSimulatedWave(); next(); };
+            u.onerror = function () { stopSimulatedWave(); next(); };
+            window.speechSynthesis.speak(u);
+        } catch (e) {
+            console.warn("⚠️ browserSpeak error:", e.message);
+            stopSimulatedWave();
+            next();
+        }
     }
 
     function next() {
@@ -233,7 +244,12 @@ const SpeechEngine = (function () {
         if (isPlaying || audioQueue.length === 0) return;
         isPlaying = true;
         const item = audioQueue.shift();
-        playText(item.text, item.mood, speakCb);
+        try {
+            playText(item.text, item.mood, speakCb);
+        } catch (e) {
+            console.warn("⚠️ processQueue error:", e.message);
+            next();
+        }
     }
 
     function enqueueChunk(t) {
@@ -252,7 +268,7 @@ const SpeechEngine = (function () {
         audioQueue = [];
         chunkBuf = '';
         chunkSent = 0;
-        apiFailed = false; // Har naye reply pe API try karo
+        apiFailed = false;
         activeVoice = localStorage.getItem('vedVoice') || 'gemini:Sulafat';
         utteranceId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
@@ -295,29 +311,18 @@ const SpeechEngine = (function () {
         streamOpen = false;
     }
 
-    // ---------- SUPER SMART VOICE PICKER (Hindi + English Premium) ----------
+    // ---------- SMART VOICE PICKER ----------
     function pickBestVoice() {
         const voices = window.speechSynthesis.getVoices();
         if (!voices.length) return null;
-
-        // Priority 1: Microsoft Neural Hindi (Swara) - Best for Hindi!
-        let voice = voices.find(function(v) { return v.name.includes('Swara') || v.name.includes('Microsoft Hindi'); });
-        
-        // Priority 2: Google Hindi
-        if (!voice) voice = voices.find(function(v) { return v.name.includes('Google हिन्दी') || v.name.includes('Google Hindi'); });
-        
-        // Priority 3: High-Quality Indian English (Google/Microsoft)
-        if (!voice) voice = voices.find(function(v) { return v.lang === 'en-IN' && (v.name.includes('Google') || v.name.includes('Microsoft')); });
-        
-        // Priority 4: Any good English
-        if (!voice) voice = voices.find(function(v) { return v.name === "Google US English"; }) ||
-                            voices.find(function(v) { return v.lang === "en-US"; });
-                            
-        // Priority 5: Fallback
-        if (!voice) voice = voices.find(function(v) { return v.lang.startsWith('hi'); }) || 
-                            voices.find(function(v) { return v.lang.startsWith('en'); }) || 
+        let voice = voices.find(function (v) { return v.name.includes('Swara') || v.name.includes('Microsoft Hindi'); });
+        if (!voice) voice = voices.find(function (v) { return v.name.includes('Google हिन्दी') || v.name.includes('Google Hindi'); });
+        if (!voice) voice = voices.find(function (v) { return v.lang === 'en-IN' && (v.name.includes('Google') || v.name.includes('Microsoft')); });
+        if (!voice) voice = voices.find(function (v) { return v.name === "Google US English"; }) ||
+                            voices.find(function (v) { return v.lang === "en-US"; });
+        if (!voice) voice = voices.find(function (v) { return v.lang.startsWith('hi'); }) ||
+                            voices.find(function (v) { return v.lang.startsWith('en'); }) ||
                             voices[0];
-                            
         return voice;
     }
     if ("speechSynthesis" in window) window.speechSynthesis.addEventListener("voiceschanged", pickBestVoice);
