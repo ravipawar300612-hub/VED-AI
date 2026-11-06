@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE v18 (VOICE LOCK + CHUNK MERGE)
+// VED AI — SPEECH ENGINE v19 (EMOTION DETECTION)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const SpeechEngine = (function () {
@@ -17,7 +17,6 @@ const SpeechEngine = (function () {
     let simulatedLoopId = null;
     let speakCb = {};
 
-    // VOICE LOCK: poori reply ek hi awaaz mein
     let activeVoice = null;
     let utteranceId = null;
     let chunkBuf = '';
@@ -25,6 +24,22 @@ const SpeechEngine = (function () {
 
     const audioCache = new Map();
     const CACHE_MAX_SIZE = 50;
+
+    // EMOTION KEYWORDS
+    const EMOTION_RULES = {
+        happy: /\b(great|amazing|wonderful|fantastic|awesome|excellent|brilliant|perfect|congrats|congratulations|yay|hooray|hurray|wow|🎉|✨|❤️|💯|shandar|badhiya|zabardast|mast|kamaal|wah|khushi|mubarak|good news)\b/i,
+        sad: /\b(sorry|sad|unfortunately|regret|loss|miss|pain|heart|😢|😭|🥺|💔|dukhi|afsos|mazrat|chinta|takleef|dukh|problem)\b/i,
+        playful: /\b(haha|lol|😂|🤣|funny|joke|mazak|masti|mazedaar|hasi|mazze|chill|cool|😏|😉)\b/i,
+        serious: /\b(important|serious|urgent|danger|warning|careful|dhyan|zaroori|gambheer|sawdhan|alert|critical|crucial|samjho)\b/i
+    };
+
+    function detectMood(text) {
+        const t = String(text).toLowerCase();
+        for (const mood in EMOTION_RULES) {
+            if (EMOTION_RULES[mood].test(t)) return mood;
+        }
+        return 'neutral';
+    }
 
     if (SpeechRecognitionAPI) {
         recognition = new SpeechRecognitionAPI();
@@ -128,16 +143,16 @@ const SpeechEngine = (function () {
     function stopSimulatedWave() { if (simulatedLoopId) clearInterval(simulatedLoopId); simulatedLoopId = null; }
     function stopCurrentAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } stopSimulatedWave(); }
 
-    // ---------- TTS FETCH (LOCKED VOICE + CACHE) ----------
-    function fetchTTS(text) {
+    // ---------- TTS FETCH (WITH MOOD) ----------
+    function fetchTTS(text, mood) {
         const voice = activeVoice || localStorage.getItem('vedVoice') || 'gemini:Sulafat';
-        const cacheKey = voice + '|' + text;
+        const cacheKey = voice + '|' + mood + '|' + text;
         if (audioCache.has(cacheKey)) return Promise.resolve(audioCache.get(cacheKey));
 
         return fetch("/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: text, voice: voice, u: utteranceId || '' })
+            body: JSON.stringify({ text: text, voice: voice, mood: mood, u: utteranceId || '' })
         })
         .then(function (r) {
             if (!r.ok) throw new Error("TTS " + r.status);
@@ -155,9 +170,9 @@ const SpeechEngine = (function () {
         });
     }
 
-    function playText(text, cb) {
-        fetchTTS(text)
-            .catch(function () { return fetchTTS(text); }) // ek retry
+    function playText(text, mood, cb) {
+        fetchTTS(text, mood)
+            .catch(function () { return fetchTTS(text, mood); })
             .then(function (blob) {
                 const url = URL.createObjectURL(blob);
                 currentAudio = new Audio(url);
@@ -199,12 +214,14 @@ const SpeechEngine = (function () {
     function processQueue() {
         if (isPlaying || audioQueue.length === 0) return;
         isPlaying = true;
-        playText(audioQueue.shift(), speakCb);
+        const item = audioQueue.shift();
+        playText(item.text, item.mood, speakCb);
     }
 
     function enqueueChunk(t) {
-        audioQueue.push(t);
-        fetchTTS(t).catch(function () {});
+        const mood = detectMood(t);
+        audioQueue.push({ text: t, mood: mood });
+        fetchTTS(t, mood).catch(function () {});
         processQueue();
     }
 
@@ -217,7 +234,6 @@ const SpeechEngine = (function () {
         audioQueue = [];
         chunkBuf = '';
         chunkSent = 0;
-        // LOCK: ab se poori reply isi awaaz mein
         activeVoice = localStorage.getItem('vedVoice') || 'gemini:Sulafat';
         utteranceId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
@@ -227,7 +243,7 @@ const SpeechEngine = (function () {
         if (!s) return;
         if (chunkSent === 0) {
             chunkSent = 1;
-            enqueueChunk(s); // pehla sentence turant (fast start)
+            enqueueChunk(s);
         } else {
             chunkBuf = chunkBuf ? chunkBuf + ' ' + s : s;
             if (chunkBuf.length >= 150) {

@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — VOICE CORE v17 (VOICE LOCK + GEMINI-ONLY PUBLIC)
+// VED AI — VOICE CORE v19 (EMOTION ENGINE)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
@@ -16,11 +16,17 @@ const CONFIG = {
     elevenDefault: 'TxGEqnHWrfWFTfGW9XjX',
     models: ['eleven_turbo_v2_5', 'eleven_multilingual_v2', 'eleven_flash_v2_5'],
     settings: { stability: 0.45, similarity_boost: 0.82, style: 0.25, use_speaker_boost: true },
-    stylePrefix: 'Say in a warm, friendly and natural tone, like a caring young friend: ',
-    maxText: 2500
+    maxText: 2500,
+    // MOOD-TO-STYLE MAP: har mood ka alag andaaz
+    moodStyles: {
+        happy: 'Say in a cheerful, excited and warm tone, with a smile in the voice, like sharing great news with a friend: ',
+        sad: 'Say in a soft, gentle, sympathetic and caring tone, showing genuine empathy: ',
+        playful: 'Say in a fun, playful, teasing and energetic tone, like telling a joke to a best friend: ',
+        serious: 'Say in a calm, confident, thoughtful and professional tone: ',
+        neutral: 'Say in a warm, friendly and natural tone, like a caring young friend: '
+    }
 };
 
-// UTTERANCE LOCK: ek reply = ek engine, kabhi mix nahi
 const utterLock = new Map();
 setInterval(function () {
     const now = Date.now();
@@ -54,12 +60,13 @@ module.exports = function() {
         return Buffer.concat([h, pcm]);
     }
 
-    async function geminiTTS(text, voiceName) {
+    async function geminiTTS(text, voiceName, mood) {
         const ai = getAI();
         if (!ai) throw new Error('no gemini key');
+        const stylePrefix = CONFIG.moodStyles[mood] || CONFIG.moodStyles.neutral;
         const res = await ai.models.generateContent({
             model: 'gemini-2.5-flash-preview-tts',
-            contents: CONFIG.stylePrefix + text,
+            contents: stylePrefix + text,
             config: {
                 responseModalities: ['AUDIO'],
                 speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } } }
@@ -96,7 +103,6 @@ module.exports = function() {
         });
     }
 
-    // PUBLIC LIST: sirf FREE Gemini voices
     router.get('/voices', (req, res) => {
         res.json({ voices: CONFIG.geminiVoices });
     });
@@ -106,6 +112,7 @@ module.exports = function() {
         const text = String(body.text || '').trim();
         let voiceId = String(body.voice || '');
         const u = String(body.u || '');
+        const mood = String(body.mood || 'neutral');
 
         if (!text) return res.status(400).send('No text');
         if (text.length > CONFIG.maxText) return res.status(400).send('Text too long');
@@ -113,14 +120,13 @@ module.exports = function() {
         const known = CONFIG.geminiVoices.some(function (v) { return v.id === voiceId; });
         if (!known) voiceId = CONFIG.geminiVoices[0].id;
 
-        // LOCK CHECK: is reply ka engine pehle se decide hai?
         const lock = u ? utterLock.get(u) : null;
         let engine = lock ? lock.engine : 'gemini';
         let buf = null;
 
         if (engine === 'gemini') {
             for (let attempt = 0; attempt < 2 && !buf; attempt++) {
-                try { buf = await geminiTTS(text, voiceId.slice(7)); }
+                try { buf = await geminiTTS(text, voiceId.slice(7), mood); }
                 catch (e) { console.warn('VOICE CORE: gemini attempt fail:', e.message); await sleep(700); }
             }
             if (buf) {
@@ -159,6 +165,7 @@ module.exports = function() {
         if (!buf) return res.status(500).send('TTS failed');
         res.setHeader('Content-Type', engine === 'gemini' ? 'audio/wav' : 'audio/mpeg');
         res.setHeader('X-VED-Engine', engine);
+        res.setHeader('X-VED-Mood', mood);
         res.send(buf);
     });
 
