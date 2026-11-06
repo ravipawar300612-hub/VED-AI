@@ -35,7 +35,7 @@ const SpeechEngine = (function () {
     const isSupported = !!SpeechRecognitionAPI;
     let currentCallbacks = null;
 
-        function cleanTextForSpeech(text) {
+    function cleanTextForSpeech(text) {
         return String(text)
             .replace(/#{1,6}\s*/g, "")
             .replace(/\*\*([^*]+)\*\*/g, "$1")
@@ -45,6 +45,8 @@ const SpeechEngine = (function () {
             .replace(/^[-*]\s+/gm, "")
             .replace(/^\d+\.\s+/gm, "")
             .replace(/https?:\/\/\S+/g, " link ")
+            .replace(/📎\s?Sources?:[^\n]*/g, " ")
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
             .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2764}]/gu, "")
             .replace(/\s+/g, " ")
             .trim();
@@ -132,7 +134,7 @@ const SpeechEngine = (function () {
             return Promise.resolve(audioCache.get(text));
         }
         
-        const savedVoice = localStorage.getItem('vedVoice') || 'pNInz6obpgDQGcFmaJgB';
+        const savedVoice = localStorage.getItem('vedVoice') || 'gemini:Sulafat';
         return fetch("/tts", { 
             method: "POST", 
             headers: { "Content-Type": "application/json" }, 
