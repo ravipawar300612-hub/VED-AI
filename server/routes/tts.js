@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — VOICE CORE v19 (EMOTION ENGINE)
+// VED AI — VOICE CORE v23 (EMOTION + FALLBACK SIGNAL)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const express = require('express');
@@ -17,13 +17,12 @@ const CONFIG = {
     models: ['eleven_turbo_v2_5', 'eleven_multilingual_v2', 'eleven_flash_v2_5'],
     settings: { stability: 0.45, similarity_boost: 0.82, style: 0.25, use_speaker_boost: true },
     maxText: 2500,
-    // MOOD-TO-STYLE MAP: har mood ka alag andaaz
     moodStyles: {
-        happy: 'Say in a cheerful, excited and warm tone, with a smile in the voice, like sharing great news with a friend: ',
-        sad: 'Say in a soft, gentle, sympathetic and caring tone, showing genuine empathy: ',
-        playful: 'Say in a fun, playful, teasing and energetic tone, like telling a joke to a best friend: ',
-        serious: 'Say in a calm, confident, thoughtful and professional tone: ',
-        neutral: 'Say in a warm, friendly and natural tone, like a caring young friend: '
+        happy: 'Say in a cheerful, excited and warm tone, with a smile in the voice: ',
+        sad: 'Say in a soft, gentle, sympathetic and caring tone: ',
+        playful: 'Say in a fun, playful, teasing and energetic tone: ',
+        serious: 'Say in a calm, confident, thoughtful tone: ',
+        neutral: 'Say in a warm, friendly and natural tone: '
     }
 };
 
@@ -126,26 +125,19 @@ module.exports = function() {
 
         if (engine === 'gemini') {
             for (let attempt = 0; attempt < 2 && !buf; attempt++) {
-                try { buf = await geminiTTS(text, voiceId.slice(7), mood); }
-                catch (e) { console.warn('VOICE CORE: gemini attempt fail:', e.message); await sleep(700); }
-                                try { 
+                try { 
                     buf = await geminiTTS(text, voiceId.slice(7), mood); 
                 } catch (e) { 
-                    console.warn('VOICE CORE: gemini attempt fail:', e.message); 
-                    // Agar quota khatam hai (429 error), toh turant frontend ko bata do
+                    console.warn('VOICE CORE: gemini fail:', e.message); 
+                    // Quota/Rate limit detection
                     if (e.message && (e.message.includes('429') || e.message.includes('quota') || e.message.includes('rate'))) {
-                        return res.status(429).send('Gemini quota exceeded');
+                        return res.status(429).send('Quota exceeded');
                     }
                     await sleep(700); 
                 }
             }
             if (buf) {
                 if (u) utterLock.set(u, { engine: 'gemini', ts: Date.now() });
-            } else if (u && lock) {
-                return res.status(500).send('Gemini locked, no mixing');
-            } else if (u && !lock) {
-                engine = 'eleven';
-                utterLock.set(u, { engine: 'eleven', ts: Date.now() });
             } else {
                 engine = 'eleven';
             }
@@ -175,7 +167,6 @@ module.exports = function() {
         if (!buf) return res.status(500).send('TTS failed');
         res.setHeader('Content-Type', engine === 'gemini' ? 'audio/wav' : 'audio/mpeg');
         res.setHeader('X-VED-Engine', engine);
-        res.setHeader('X-VED-Mood', mood);
         res.send(buf);
     });
 

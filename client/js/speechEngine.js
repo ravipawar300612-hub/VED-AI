@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE v22 (CRASH-PROOF + SINGLE-POST + EMOTION)
+// VED AI — SPEECH ENGINE v23 (SMART FALLBACK + MOOD PITCH)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const SpeechEngine = (function () {
@@ -28,10 +28,10 @@ const SpeechEngine = (function () {
     const CACHE_MAX_SIZE = 50;
 
     const EMOTION_RULES = {
-        happy: /(great|amazing|wonderful|fantastic|awesome|excellent|brilliant|perfect|congrats|congratulations|yay|hooray|hurray|wow|shandar|badhiya|zabardast|mast|kamaal|wah|khushi|mubarak|good news|🎉|✨|❤️|💯)/i,
-        sad: /(sorry|sad|unfortunately|regret|loss|miss you|pain|heartbreak|dukhi|afsos|mazrat|chinta|takleef|dukh|😢|😭|🥺)/i,
+        happy: /(great|amazing|wonderful|fantastic|awesome|excellent|brilliant|perfect|congrats|yay|wow|shandar|badhiya|zabardast|mast|kamaal|wah|khushi|mubarak|good news|🎉|✨|❤️|💯)/i,
+        sad: /(sorry|sad|unfortunately|regret|loss|miss|pain|dukhi|afsos|mazrat|chinta|takleef|dukh|problem|😢|😭|🥺)/i,
         playful: /(haha|lol|funny|joke|mazak|masti|mazedaar|hasi|mazze|chill|cool|😂|🤣|😉)/i,
-        serious: /(important|serious|urgent|danger|warning|careful|dhyan|zaroori|gambheer|sawdhan|alert|critical|crucial|samjho)/i
+        serious: /(important|serious|urgent|danger|warning|careful|dhyan|zaroori|gambheer|sawdhan|alert|critical|samjho)/i
     };
 
     function detectMood(text) {
@@ -144,9 +144,9 @@ const SpeechEngine = (function () {
     function stopSimulatedWave() { if (simulatedLoopId) clearInterval(simulatedLoopId); simulatedLoopId = null; }
     function stopCurrentAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } stopSimulatedWave(); }
 
-    // ---------- TTS FETCH (SINGLE POST PER CHUNK — quota 2x bachega) ----------
+    // ---------- TTS FETCH (SINGLE POST) ----------
     function fetchTTS(text, mood) {
-        if (apiFailed) return Promise.reject(new Error("API blocked, using browser"));
+        if (apiFailed) return Promise.reject(new Error("API blocked"));
         const voice = activeVoice || localStorage.getItem('vedVoice') || 'gemini:Sulafat';
         const cacheKey = voice + '|' + mood + '|' + text;
         if (audioCache.has(cacheKey)) return Promise.resolve(audioCache.get(cacheKey));
@@ -160,7 +160,7 @@ const SpeechEngine = (function () {
         .then(function (r) {
             if (r.status === 429 || r.status === 500) {
                 apiFailed = true;
-                throw new Error("Quota exceeded or Server Error");
+                throw new Error("Quota exceeded");
             }
             if (!r.ok) throw new Error("TTS " + r.status);
             return r.blob();
@@ -196,21 +196,22 @@ const SpeechEngine = (function () {
                 return currentAudio.play();
             })
             .catch(function (err) {
-                console.warn("⚠️ API TTS fail, browser voice:", err.message);
+                console.warn("⚠️ API fail, using browser voice:", err.message);
                 browserSpeak(text, mood, cb);
             });
     }
 
-    // ---------- BROWSER FALLBACK (mood FIXED + crash-proof) ----------
+    // ---------- BROWSER FALLBACK (CRASH-PROOF) ----------
     function browserSpeak(text, mood, cb) {
         cb = cb || {};
-        mood = mood || 'neutral';
+        mood = mood || 'neutral'; // FIX: Mood undefined crash
         try {
             if (!window.speechSynthesis) { next(); return; }
             const u = new SpeechSynthesisUtterance(text);
             const v = pickBestVoice();
             if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "hi-IN"; }
 
+            // Mood-based Pitch/Rate
             if (mood === 'happy' || mood === 'playful') { u.pitch = 1.1; u.rate = 1.05; }
             else if (mood === 'sad' || mood === 'serious') { u.pitch = 0.9; u.rate = 0.95; }
             else { u.pitch = 1.0; u.rate = 1.0; }
