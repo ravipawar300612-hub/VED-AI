@@ -22,7 +22,8 @@ const CONFIG = {
         sad: 'Say in a soft, gentle, sympathetic and caring tone: ',
         playful: 'Say in a fun, playful, teasing and energetic tone: ',
         serious: 'Say in a calm, confident, thoughtful tone: ',
-        neutral: 'Say in a warm, friendly and natural tone: '
+        neutral: 'Say in a warm, friendly and natural tone: ',
+        laughing: 'Say while genuinely chuckling and laughing warmly, letting real laughter sparkle between the words: ',
     }
 };
 

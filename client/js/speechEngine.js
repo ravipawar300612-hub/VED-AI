@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE v23 (SMART FALLBACK + MOOD PITCH)
+// VED AI — SPEECH ENGINE v25 (LAUGH MIRROR: tu hasegi to VED bhi hansega)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const SpeechEngine = (function () {
@@ -22,6 +22,7 @@ const SpeechEngine = (function () {
     let chunkBuf = '';
     let chunkSent = 0;
     let apiFailed = false;
+    let mirrorMood = 'neutral'; // USER ka mood — VED mirror karega
 
     const audioCache = new Map();
     const pendingFetch = new Map();
@@ -40,6 +41,15 @@ const SpeechEngine = (function () {
             if (EMOTION_RULES[mood].test(t)) return mood;
         }
         return 'neutral';
+    }
+
+    // USER KI HASI PAKADNE WALA RADAR 😂
+    function detectUserEmotion(text) {
+        const t = String(text);
+        if (/(haha|hehe|hihi|ho ho|ahaha|ha ha|haa ha|lol|lmao|😂|🤣)/i.test(t)) return 'laughing';
+        if (EMOTION_RULES.sad.test(t)) return 'sad';
+        if (EMOTION_RULES.happy.test(t)) return 'happy';
+        return null;
     }
 
     if (SpeechRecognitionAPI) {
@@ -83,6 +93,7 @@ const SpeechEngine = (function () {
         currentCallbacks = callbacks;
         restartCount = 0;
         isExplicitlyStopped = false;
+        mirrorMood = 'neutral'; // nayi sunwai = naya mirror
         lastFinalTime = Date.now();
         attachHandlers();
         try { recognition.start(); }
@@ -103,6 +114,14 @@ const SpeechEngine = (function () {
                 const tr = event.results[i][0].transcript;
                 if (event.results[i].isFinal) { finalText += tr; lastFinalTime = Date.now(); restartCount = 0; }
                 else interimText += tr;
+            }
+            // LAUGH MIRROR: user ki hasi/mood pakdo
+            if (finalText) {
+                const um = detectUserEmotion(finalText);
+                if (um) {
+                    mirrorMood = um;
+                    console.log("🪞 Mirror mood detected:", um);
+                }
             }
             if (interimText && onInterim) onInterim(interimText);
             if (finalText && onFinal) onFinal(finalText);
@@ -144,7 +163,7 @@ const SpeechEngine = (function () {
     function stopSimulatedWave() { if (simulatedLoopId) clearInterval(simulatedLoopId); simulatedLoopId = null; }
     function stopCurrentAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } stopSimulatedWave(); }
 
-    // ---------- TTS FETCH (SINGLE POST) ----------
+    // ---------- TTS FETCH ----------
     function fetchTTS(text, mood) {
         if (apiFailed) return Promise.reject(new Error("API blocked"));
         const voice = activeVoice || localStorage.getItem('vedVoice') || 'gemini:Sulafat';
@@ -201,25 +220,26 @@ const SpeechEngine = (function () {
             });
     }
 
-    // ---------- BROWSER FALLBACK (CRASH-PROOF) ----------
+    // ---------- BROWSER FALLBACK (ANTI-JAM) ----------
     function browserSpeak(text, mood, cb) {
         cb = cb || {};
-        mood = mood || 'neutral'; // FIX: Mood undefined crash
+        mood = mood || 'neutral';
         try {
             if (!window.speechSynthesis) { next(); return; }
+            window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
             const v = pickBestVoice();
-            if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "hi-IN"; }
+            if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "en-US"; }
 
-            // Mood-based Pitch/Rate
-            if (mood === 'happy' || mood === 'playful') { u.pitch = 1.1; u.rate = 1.05; }
+            if (mood === 'laughing') { u.pitch = 1.25; u.rate = 1.1; }
+            else if (mood === 'happy' || mood === 'playful') { u.pitch = 1.1; u.rate = 1.05; }
             else if (mood === 'sad' || mood === 'serious') { u.pitch = 0.9; u.rate = 0.95; }
             else { u.pitch = 1.0; u.rate = 1.0; }
 
             u.onstart = function () { startSimulatedWave(cb.onAmplitude); if (cb.onStart) cb.onStart(); };
             u.onend = function () { stopSimulatedWave(); next(); };
             u.onerror = function () { stopSimulatedWave(); next(); };
-            window.speechSynthesis.speak(u);
+            setTimeout(function () { window.speechSynthesis.speak(u); }, 100);
         } catch (e) {
             console.warn("⚠️ browserSpeak error:", e.message);
             stopSimulatedWave();
@@ -254,7 +274,13 @@ const SpeechEngine = (function () {
     }
 
     function enqueueChunk(t) {
-        const mood = detectMood(t);
+        let mood = detectMood(t);
+        // LAUGH MIRROR BLEND: user hasi thi to VED bhi hansega
+        if (mirrorMood === 'laughing' && (mood === 'neutral' || mood === 'happy' || mood === 'playful')) {
+            mood = 'laughing';
+        } else if (mirrorMood !== 'neutral' && mood === 'neutral') {
+            mood = mirrorMood;
+        }
         audioQueue.push({ text: t, mood: mood });
         if (!apiFailed) fetchTTS(t, mood).catch(function () {});
         processQueue();
