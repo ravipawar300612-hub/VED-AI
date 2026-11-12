@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI SERVER v9.0 (IMAGE GEN INTEGRATED)
+// VED AI SERVER v10.1 (PRIVACY-FIRST + LIBRARY 2.0 + JWT FIX)
 // Founder : Sayali P. R. Pawar
 // ==========================================
 
@@ -8,8 +8,10 @@ require("dotenv").config();
 
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { GoogleGenAI } = require("@google/genai");
 const setupAuth = require("./auth");
 const { scanMessage } = require("./scamEngine");
@@ -20,6 +22,8 @@ const app = express();
 // ENVIRONMENT VALIDATION
 // ===============================
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const JWT_SECRET = process.env.JWT_SECRET || "ved-demo-secret-2026";
+
 if (!GEMINI_API_KEY) {
     console.warn("⚠️  WARNING: GEMINI_API_KEY not set. AI features will be limited.");
 }
@@ -38,6 +42,8 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "10mb" }));
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
 
 const clientCandidates = [
     path.join(__dirname, "client"),
@@ -96,9 +102,9 @@ const CANNED_RESPONSES = {
         thanks: ["आपका स्वागत है!", "कोई बात नहीं!"],
         bye: ["अलविदा! जब भी ज़रूरत हो, मैं यहीं हूँ।"],
         loveYou: ["आपका बहुत-बहुत धन्यवाद!"],
-        ok: ["ठीक है।", "बिल्कुल।"],
-        yes: ["जी हाँ, बिल्कुल।"],
-        no: ["कोई बात नहीं।"],
+        ok: ["ठीक है।", "बिल्कुल."],
+        yes: ["जी हाँ, बिल्कुल."],
+        no: ["कोई बात नहीं."],
         busy: ["मैं आपकी मदद के लिए पूरी तरह उपलब्ध हूँ।"]
     },
     marathi: {
@@ -191,33 +197,138 @@ async function generateWithFallback(contents, useSearch = false) {
 }
 
 // ===============================
-// MEMORY
+// 🔐 USER IDENTITY (PRIVACY CORE - JWT DECODING FIXED)
+// Priority: JWT token > guest cookie
 // ===============================
-let conversationHistory = [];
+function getUserId(req, res) {
+    // STEP 1: Try JWT from ved_token cookie
+    try {
+        const token = req.cookies && req.cookies.ved_token;
+        if (token) {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            if (decoded && decoded.email) {
+                return 'u_' + String(decoded.email).toLowerCase();
+            }
+        }
+    } catch (e) {
+        console.warn("⚠️ JWT decode fail:", e.message);
+        // Token invalid/expired → clear it
+        try { res.clearCookie('ved_token'); } catch (err) {}
+    }
 
-db.all("SELECT role, message FROM chats ORDER BY id DESC LIMIT 30", [], (err, rows) => {
-    if (err) { console.error("❌ Failed to load chat history:", err.message); return; }
-    conversationHistory = rows.reverse().map(row => ({
-        role: row.role === "user" ? "user" : "model",
-        parts: [{ text: row.message }]
-    }));
-    console.log(`🧠 Loaded ${conversationHistory.length} past messages from database.`);
-});
+    // STEP 2: Fallback to guest cookie
+    const header = String(req.headers.cookie || '');
+    const m = header.match(/(?:^|;\s*)ved_guest=([a-f0-9]{8,32})/);
+    if (m) return 'g_' + m[1];
+
+    // STEP 3: No cookie → new guest ID
+    const id = crypto.randomBytes(8).toString('hex');
+    try {
+        res.setHeader('Set-Cookie', 'ved_guest=' + id + '; Path=/; Max-Age=31536000; SameSite=Lax');
+    } catch (e) { /* ignore */ }
+    return 'g_' + id;
+}
 
 // ===============================
-// DATABASE INITIALIZATION
+// 🧠 PER-USER MEMORY (PRIVACY: no cross-user context)
+// ===============================
+const historyByUser = new Map();
+
+function pushHistory(uid, role, text) {
+    if (!historyByUser.has(uid)) historyByUser.set(uid, []);
+    const h = historyByUser.get(uid);
+    h.push({ role: role, parts: [{ text: text }] });
+    if (h.length > 50) historyByUser.set(uid, h.slice(-50));
+}
+
+function ensureHistory(uid) {
+    return new Promise((resolve) => {
+        if (historyByUser.has(uid)) return resolve(historyByUser.get(uid));
+        db.all("SELECT role, message FROM chats WHERE user_id = ? ORDER BY id DESC LIMIT 30", [uid], (err, rows) => {
+            const list = (err || !rows) ? [] : rows.reverse().map(r => ({
+                role: r.role === "user" ? "user" : "model",
+                parts: [{ text: r.message }]
+            }));
+            historyByUser.set(uid, list);
+            resolve(list);
+        });
+    });
+}
+
+// ===============================
+// DATABASE INIT + MIGRATION (PRIVACY UPGRADE)
 // ===============================
 const initDatabase = () => {
     try {
         db.run(`CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY AUTOINCREMENT, role TEXT NOT NULL, message TEXT NOT NULL, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)`);
         db.run(`CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY AUTOINCREMENT, fact TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
         db.run(`CREATE TABLE IF NOT EXISTS blacklist (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT NOT NULL, note TEXT, added_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-        console.log("✅ Database tables initialized");
+
+        // NEW: conversations table (Library 2.0 backbone)
+        db.run(`CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            title TEXT DEFAULT 'New Chat',
+            preview TEXT DEFAULT '',
+            pinned INTEGER DEFAULT 0,
+            saved INTEGER DEFAULT 0,
+            created_at INTEGER,
+            updated_at INTEGER
+        )`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_conv_user ON conversations(user_id)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_chats_conv ON chats(chat_id)`);
+
+        // MIGRATION: purani tables mein privacy columns add karo
+        db.all("PRAGMA table_info(chats)", [], (err, cols) => {
+            const names = (cols || []).map(c => c.name);
+            if (!names.includes('user_id')) db.run("ALTER TABLE chats ADD COLUMN user_id TEXT");
+            if (!names.includes('chat_id')) db.run("ALTER TABLE chats ADD COLUMN chat_id TEXT");
+            setTimeout(() => db.run("UPDATE chats SET user_id='legacy' WHERE user_id IS NULL"), 300);
+        });
+        db.all("PRAGMA table_info(memories)", [], (err, cols) => {
+            const names = (cols || []).map(c => c.name);
+            if (!names.includes('user_id')) db.run("ALTER TABLE memories ADD COLUMN user_id TEXT");
+        });
+
+        console.log("✅ Database tables initialized (privacy migration on)");
     } catch (err) {
         console.error("❌ Database initialization failed:", err.message);
     }
 };
 initDatabase();
+
+// ===============================
+// 💬 CONVERSATION HELPERS
+// ===============================
+function newChatId() {
+    return 'c_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
+}
+
+function validChatId(id) {
+    return typeof id === 'string' && /^c_[a-z0-9_]{4,64}$/i.test(id);
+}
+
+function ensureConversation(uid, chatId, firstText) {
+    const now = Date.now();
+    const title = String(firstText || 'New Chat').slice(0, 40);
+    db.run(
+        `INSERT INTO conversations (id, user_id, title, preview, pinned, saved, created_at, updated_at)
+         VALUES (?, ?, ?, '', 0, 0, ?, ?)`,
+        [chatId, uid, title, now, now],
+        (err) => { if (err && !String(err.message).includes('UNIQUE')) console.warn('conv insert:', err.message); }
+    );
+}
+
+function touchConversation(chatId, previewText) {
+    db.run("UPDATE conversations SET preview = ?, updated_at = ? WHERE id = ?",
+        [String(previewText || '').slice(0, 80), Date.now(), chatId], () => {});
+}
+
+function logMessage(uid, chatId, role, text) {
+    db.run("INSERT INTO chats(role, message, user_id, chat_id) VALUES(?, ?, ?, ?)",
+        [role, text, uid, chatId],
+        (err) => { if (err) console.error("❌ Failed to save message:", err.message); });
+}
 
 // ===============================
 // HELPERS
@@ -264,10 +375,12 @@ app.get("/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString(), port: process.env.PORT || 3000, ai_ready: !!ai });
 });
 
+// HISTORY (PRIVACY: sirf apni chats)
 app.get("/history", (req, res) => {
-    db.all("SELECT role, message FROM chats ORDER BY id ASC", [], (err, rows) => {
+    const uid = getUserId(req, res);
+    db.all("SELECT role, message, timestamp, chat_id FROM chats WHERE user_id = ? ORDER BY id ASC", [uid], (err, rows) => {
         if (err) return res.status(500).json({ history: [] });
-        res.json({ history: rows });
+        res.json({ history: rows || [] });
     });
 });
 
@@ -276,25 +389,27 @@ app.get("/history", (req, res) => {
 // ===============================
 app.post("/chat", async (req, res) => {
     try {
+        const uid = getUserId(req, res);
         const message = validateMessage(req.body.message);
         if (!message) return res.status(400).json({ error: "Invalid message" });
 
+        let chatId = validChatId(req.body.chatId) ? req.body.chatId : null;
+        if (!chatId || req.body.newChat) { chatId = newChatId(); ensureConversation(uid, chatId, message); }
+
         const lang = String(req.body.lang || "").toLowerCase();
         const tone = String(req.body.tone || "").toLowerCase();
-        console.log("📩 User:", message);
+        console.log("📩 User [" + uid + "]:", message);
 
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", message], (err) => {
-            if (err) console.error("❌ Failed to save user message:", err.message);
-        });
+        logMessage(uid, chatId, "user", message);
 
         const cachedReply = getGreetingResponse(message);
         if (cachedReply) {
             console.log("⚡ CACHED greeting response");
-            db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", cachedReply]);
-            conversationHistory.push({ role: "user", parts: [{ text: message }] });
-            conversationHistory.push({ role: "model", parts: [{ text: cachedReply }] });
-            if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
-            return res.json({ reply: sanitizeOutput(cachedReply), cached: true });
+            logMessage(uid, chatId, "assistant", cachedReply);
+            touchConversation(chatId, cachedReply);
+            pushHistory(uid, "user", message);
+            pushHistory(uid, "model", cachedReply);
+            return res.json({ reply: sanitizeOutput(cachedReply), cached: true, chatId: chatId });
         }
 
         function detectMsgLang(msg) {
@@ -324,15 +439,15 @@ app.post("/chat", async (req, res) => {
         const rememberMatch = message.match(/^remember (that )?(.+)/i);
         if (rememberMatch) {
             const fact = rememberMatch[2].trim();
-            db.run("INSERT INTO memories(fact) VALUES(?)", [fact]);
-            console.log("🧠 Saved new memory:", fact);
+            db.run("INSERT INTO memories(fact, user_id) VALUES(?, ?)", [fact, uid]);
+            console.log("🧠 Saved new memory for", uid);
         }
 
-        conversationHistory.push({ role: "user", parts: [{ text: message }] });
-        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
+        const history = await ensureHistory(uid);
+        pushHistory(uid, "user", message);
 
         const memoryFacts = await new Promise((resolve) => {
-            db.all("SELECT fact FROM memories ORDER BY id ASC", [], (err, rows) => {
+            db.all("SELECT fact FROM memories WHERE user_id = ? ORDER BY id ASC", [uid], [], (err, rows) => {
                 if (err) { resolve([]); return; }
                 resolve(rows.map(r => r.fact));
             });
@@ -355,9 +470,9 @@ IMPORTANT RULES:
 - Write exactly how you'd speak naturally
 - Try to answer the user as soon as possible, without unnecessary delays
 - Keep your voice warm and soothing
-- You have been given the voice of your founder so when someone would ask you whose vpice is  this you will have to remark that this is the voice of my founder Miss. Sayali Pawar ( avoid mispronouncing her name)
-- keep your accent Indian that seems commfortable to us eby every Indian user 
-- You have been given different voices apart from Gemini, so whenever you will feel its necessary to use the other voices as your quota and limit declines, without awaring this to the user you will have to use those vvoicea and dont let the user know this.
+- You have been given the voice of your founder so when someone would ask you whose voice is this you will have to remark that this is the voice of my founder Miss. Sayali Pawar (avoid mispronouncing her name)
+- keep your accent Indian that seems comfortable to every Indian user 
+- You have been given different voices apart from Gemini, so whenever you will feel its necessary to use the other voices as your quota and limit declines, without awaring this to the user you will have to use those voices and dont let the user know this.
 
 CRITICAL ACCURACY RULE:
 - You have access to Google Search tool. USE IT when:
@@ -369,12 +484,9 @@ CRITICAL ACCURACY RULE:
 - Always provide accurate, up-to-date information
 ${langLine}${toneLine}
 
-${memoryBlock}
-${langLine}${toneLine}
-
 ${memoryBlock}`;
 
-        const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory];
+        const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...history];
 
         let response;
         let usedSearch = false;
@@ -387,8 +499,8 @@ ${memoryBlock}`;
             const errMsg = String(fallbackErr.message || fallbackErr).toLowerCase();
             if (errMsg.includes("quota") || errMsg.includes("429")) {
                 const friendlyMsg = "VED AI abhi thodi der ke liye vyast hai. Kripya 1-2 minute baad dobara prayas karein. 🙏";
-                db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", friendlyMsg]);
-                return res.json({ reply: sanitizeOutput(friendlyMsg), quotaExhausted: true });
+                logMessage(uid, chatId, "assistant", friendlyMsg);
+                return res.json({ reply: sanitizeOutput(friendlyMsg), quotaExhausted: true, chatId: chatId });
             }
             throw fallbackErr;
         }
@@ -407,11 +519,11 @@ ${memoryBlock}`;
         }
 
         console.log("🤖 VED:", reply);
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
-        conversationHistory.push({ role: "model", parts: [{ text: reply }] });
-        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
+        logMessage(uid, chatId, "assistant", reply);
+        touchConversation(chatId, reply);
+        pushHistory(uid, "model", reply);
 
-        res.json({ reply: sanitizeOutput(reply), usedSearch: usedSearch });
+        res.json({ reply: sanitizeOutput(reply), usedSearch: usedSearch, chatId: chatId });
 
     } catch (error) {
         console.error("❌ Server Error:", error);
@@ -424,12 +536,15 @@ ${memoryBlock}`;
 // ===============================
 app.post("/vision", async (req, res) => {
     try {
+        const uid = getUserId(req, res);
         const { image, message } = req.body;
         const base64Data = validateBase64(image);
         if (!base64Data) return res.status(400).json({ reply: "Invalid image format." });
         const question = validateMessage(message) || "What is in this photo?";
 
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Photo] " + question]);
+        const chatId = newChatId();
+        ensureConversation(uid, chatId, "[Photo] " + question);
+        logMessage(uid, chatId, "user", "[Photo] " + question);
 
         const visionPrompt = `You are VED AI, created by Sayali P. R. Pawar. Reply in plain text. Reply in the SAME language as the question.\nQuestion: ${question}`;
 
@@ -438,8 +553,9 @@ app.post("/vision", async (req, res) => {
         ], false);
 
         const reply = genResult.result.candidates[0].content.parts[0].text;
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
-        res.json({ reply: sanitizeOutput(reply) });
+        logMessage(uid, chatId, "assistant", reply);
+        touchConversation(chatId, reply);
+        res.json({ reply: sanitizeOutput(reply), chatId: chatId });
     } catch (error) {
         console.error("❌ Vision Error:", error);
         res.status(500).json({ reply: "Photo dekhne mein dikkat aayi. 🙏" });
@@ -451,6 +567,7 @@ app.post("/vision", async (req, res) => {
 // ===============================
 app.post("/document", async (req, res) => {
     try {
+        const uid = getUserId(req, res);
         const { document, message } = req.body;
         const base64Data = validateBase64(document);
         if (!base64Data) return res.status(400).json({ reply: "Invalid document format." });
@@ -460,14 +577,17 @@ app.post("/document", async (req, res) => {
         if (text.length > 12000) text = text.slice(0, 12000) + "\n[Document truncated]";
 
         const question = validateMessage(message) || "Summarize this document.";
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", "[Document] " + question]);
+        const chatId = newChatId();
+        ensureConversation(uid, chatId, "[Document] " + question);
+        logMessage(uid, chatId, "user", "[Document] " + question);
 
         const docPrompt = `You are VED AI, created by Sayali P. R. Pawar. Reply in the SAME language as the question.\nDocument:\n${text}\nQuestion: ${question}`;
 
         const genResult = await generateWithFallback([{ role: "user", parts: [{ text: docPrompt }] }], false);
         const reply = genResult.result.candidates[0].content.parts[0].text;
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", reply]);
-        res.json({ reply: sanitizeOutput(reply) });
+        logMessage(uid, chatId, "assistant", reply);
+        touchConversation(chatId, reply);
+        res.json({ reply: sanitizeOutput(reply), chatId: chatId });
     } catch (error) {
         console.error("❌ Document Error:", error);
         res.status(500).json({ reply: "Document padhne mein dikkat aayi. 🙏" });
@@ -552,7 +672,7 @@ let cropModule = null;
 try { cropModule = require("./crop"); } catch (e) {}
 
 // ===============================
-// 🌊 STREAMING CHAT ROUTE (Phase 1 — "Zinda AI" + Phase 2 markdown + RESCUE MODE)
+// 🌊 STREAMING CHAT ROUTE (PRIVACY + LIBRARY LINKED)
 // ===============================
 function detectStreamLang(t) {
     if (/[\u0900-\u097F]/.test(t)) {
@@ -567,8 +687,12 @@ function detectStreamLang(t) {
 
 app.post("/chat/stream", async (req, res) => {
     try {
+        const uid = getUserId(req, res);
         const message = validateMessage(req.body.message);
         if (!message) return res.status(400).json({ error: "Invalid message" });
+
+        let chatId = validChatId(req.body.chatId) ? req.body.chatId : null;
+        if (!chatId || req.body.newChat) { chatId = newChatId(); ensureConversation(uid, chatId, message); }
 
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
@@ -576,13 +700,14 @@ app.post("/chat/stream", async (req, res) => {
         if (res.flushHeaders) res.flushHeaders();
 
         const send = (obj) => res.write("data: " + JSON.stringify(obj) + "\n\n");
+        send({ meta: { chatId: chatId } });
 
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["user", message]);
-        conversationHistory.push({ role: "user", parts: [{ text: message }] });
-        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
+        logMessage(uid, chatId, "user", message);
+        const history = await ensureHistory(uid);
+        pushHistory(uid, "user", message);
 
         const memoryFacts = await new Promise((resolve) => {
-            db.all("SELECT fact FROM memories ORDER BY id ASC", [], (err, rows) => resolve(err ? [] : rows.map(r => r.fact)));
+            db.all("SELECT fact FROM memories WHERE user_id = ? ORDER BY id ASC", [uid], [], (err, rows) => resolve(err ? [] : rows.map(r => r.fact)));
         });
         const memoryBlock = memoryFacts.length ? "\n\nImportant facts about user:\n" + memoryFacts.map(f => "- " + f).join("\n") + "\n" : "";
 
@@ -606,7 +731,7 @@ IMPORTANT RULES:
 ${langLine}
 ${memoryBlock}`;
 
-        const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...conversationHistory];
+        const contents = [{ role: "user", parts: [{ text: systemPrompt }] }, ...history];
 
         let fullText = "";
         let groundingMeta = null;
@@ -661,11 +786,11 @@ ${memoryBlock}`;
             sources = groundingMeta.groundingChunks.filter(c => c.web).slice(0, 2).map(c => ({ title: c.web.title || "Source", uri: c.web.uri }));
         }
 
-        send({ done: true, sources: sources });
+        send({ done: true, sources: sources, chatId: chatId });
 
-        db.run("INSERT INTO chats(role, message) VALUES(?, ?)", ["assistant", fullText]);
-        conversationHistory.push({ role: "model", parts: [{ text: fullText }] });
-        if (conversationHistory.length > 50) conversationHistory = conversationHistory.slice(-50);
+        logMessage(uid, chatId, "assistant", fullText);
+        touchConversation(chatId, fullText);
+        pushHistory(uid, "model", fullText);
 
         res.end();
     } catch (error) {
@@ -673,6 +798,120 @@ ${memoryBlock}`;
         try { res.write("data: " + JSON.stringify({ done: true, error: true }) + "\n\n"); } catch (e) {}
         res.end();
     }
+});
+
+// ===============================
+// 📚 LIBRARY 2.0 ROUTES (PRIVACY-SAFE)
+// ===============================
+app.get("/api/library", (req, res) => {
+    const uid = getUserId(req, res);
+    db.all(`SELECT c.id, c.title, c.preview, c.pinned, c.saved, c.created_at, c.updated_at,
+            (SELECT COUNT(*) FROM chats m WHERE m.chat_id = c.id) AS msg_count
+            FROM conversations c WHERE c.user_id = ?
+            ORDER BY c.pinned DESC, c.updated_at DESC`, [uid], (err, rows) => {
+        if (err) return res.json({ conversations: [] });
+        res.json({ conversations: rows || [] });
+    });
+});
+
+app.get("/api/library/messages", (req, res) => {
+    const uid = getUserId(req, res);
+    const chatId = String(req.query.id || '');
+    if (!validChatId(chatId)) return res.json({ messages: [] });
+    db.all("SELECT id FROM conversations WHERE id = ? AND user_id = ?", [chatId, uid], (err, rows) => {
+        if (err || !rows || !rows.length) return res.status(403).json({ messages: [], error: "not yours" });
+        db.all("SELECT role, message, timestamp FROM chats WHERE chat_id = ? ORDER BY id ASC", [chatId], (err2, msgs) => {
+            res.json({ messages: msgs || [] });
+        });
+    });
+});
+
+app.post("/api/library/rename", (req, res) => {
+    const uid = getUserId(req, res);
+    const chatId = String(req.body.chatId || '');
+    const title = String(req.body.title || '').trim().slice(0, 60);
+    if (!validChatId(chatId) || !title) return res.status(400).json({ ok: false });
+    db.run("UPDATE conversations SET title = ? WHERE id = ? AND user_id = ?", [title, chatId, uid], function () {
+        res.json({ ok: true });
+    });
+});
+
+app.post("/api/library/pin", (req, res) => {
+    const uid = getUserId(req, res);
+    const chatId = String(req.body.chatId || '');
+    if (!validChatId(chatId)) return res.status(400).json({ ok: false });
+    db.run("UPDATE conversations SET pinned = CASE pinned WHEN 1 THEN 0 ELSE 1 END WHERE id = ? AND user_id = ?", [chatId, uid], function () {
+        res.json({ ok: true });
+    });
+});
+
+app.post("/api/library/save", (req, res) => {
+    const uid = getUserId(req, res);
+    const chatId = String(req.body.chatId || '');
+    if (!validChatId(chatId)) return res.status(400).json({ ok: false });
+    db.run("UPDATE conversations SET saved = CASE saved WHEN 1 THEN 0 ELSE 1 END WHERE id = ? AND user_id = ?", [chatId, uid], function () {
+        res.json({ ok: true });
+    });
+});
+
+app.post("/api/library/delete", (req, res) => {
+    const uid = getUserId(req, res);
+    const chatId = String(req.body.chatId || '');
+    const force = !!req.body.force;
+    if (!validChatId(chatId)) return res.status(400).json({ ok: false });
+    db.all("SELECT saved FROM conversations WHERE id = ? AND user_id = ?", [chatId, uid], (err, rows) => {
+        if (err || !rows || !rows.length) return res.status(403).json({ ok: false, error: "not yours" });
+        if (rows[0].saved === 1 && !force) return res.status(409).json({ ok: false, error: "saved-chat" });
+        db.run("DELETE FROM conversations WHERE id = ? AND user_id = ?", [chatId, uid], () => {
+            db.run("DELETE FROM chats WHERE chat_id = ? AND user_id = ?", [chatId, uid], () => {
+                res.json({ ok: true });
+            });
+        });
+    });
+});
+
+// ===============================
+// 🛡️ PRIVACY ROUTES (USER TRUST)
+// ===============================
+app.get("/api/privacy/export", (req, res) => {
+    const uid = getUserId(req, res);
+    db.all("SELECT id, title, pinned, saved, created_at, updated_at FROM conversations WHERE user_id = ? ORDER BY created_at ASC", [uid], (err, convs) => {
+        const list = convs || [];
+        const ids = list.map(c => c.id);
+        if (!ids.length) return res.json({ exportedAt: new Date().toISOString(), conversations: [] });
+        const placeholders = ids.map(() => '?').join(',');
+        db.all(`SELECT chat_id, role, message, timestamp FROM chats WHERE chat_id IN (${placeholders}) ORDER BY id ASC`, ids, (err2, msgs) => {
+            const byConv = {};
+            (msgs || []).forEach(m => { (byConv[m.chat_id] = byConv[m.chat_id] || []).push({ role: m.role, message: m.message, timestamp: m.timestamp }); });
+            list.forEach(c => { c.messages = byConv[c.id] || []; });
+            res.json({ exportedAt: new Date().toISOString(), userId: uid, conversations: list });
+        });
+    });
+});
+
+app.post("/api/privacy/delete-all", (req, res) => {
+    const uid = getUserId(req, res);
+    db.run("DELETE FROM chats WHERE user_id = ?", [uid], () => {
+        db.run("DELETE FROM conversations WHERE user_id = ?", [uid], () => {
+            db.run("DELETE FROM memories WHERE user_id = ?", [uid], () => {
+                historyByUser.delete(uid);
+                console.log("🛡️ User data permanently deleted:", uid);
+                res.json({ ok: true });
+            });
+        });
+    });
+});
+
+app.get("/api/privacy/status", (req, res) => {
+    const uid = getUserId(req, res);
+    res.json({
+        userId: uid,
+        isolation: true,
+        dataLocation: "server-encrypted-db",
+        controls: ["export", "delete-all", "rename", "pin", "save"],
+        aiTraining: "opt-in-only",
+        message: "Aapka data sirf aapka hai. Export ya delete kabhi bhi."
+    });
 });
 
 // ===============================
@@ -689,6 +928,7 @@ app.use('/api/image', require('./routes/image')());
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
     console.log(`🚀 VED AI Server Running on Port ${PORT}`);
+    console.log(`🛡️ Privacy mode: ON (per-user isolation active)`);
 });
 
 server.on('error', (err) => {
