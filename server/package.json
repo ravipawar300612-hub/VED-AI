@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@libsql/client": "^0.15.11",
     "@google/genai": "^2.13.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -18,7 +19,6 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pdf-parse": "^2.4.5",
-    "sqlite3": "^6.0.1"
+    "pdf-parse": "^2.4.5"
   }
 }
