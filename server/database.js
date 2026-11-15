@@ -1,24 +1,52 @@
 // ==========================================
-// VED AI DATABASE - REAL SQLITE (LOCAL)
+// VED AI DATABASE — TURSO CLOUD (PERMANENT MEMORY ☁️)
 // Founder : Sayali P. R. Pawar
 // ==========================================
+const { createClient } = require('@libsql/client');
 
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const url = process.env.TURSO_DATABASE_URL;
+const authToken = process.env.TURSO_AUTH_TOKEN;
 
-// Database file ko server folder mein save karo
-const dbPath = path.join(__dirname, 'ved_database.sqlite');
-console.log('🗄️ Database path:', dbPath);
+if (!url || !authToken) {
+    console.error('❌ DATABASE: Render mein TURSO_DATABASE_URL aur TURSO_AUTH_TOKEN env add karo!');
+}
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('❌ Database connection error:', err.message);
-    } else {
-        console.log('✅ SQLite database connected!');
-    }
-});
+const client = createClient({ url: url, authToken: authToken });
 
-// Enable foreign keys
-db.run('PRAGMA foreign_keys = ON');
+function normArgs(params, callback) {
+    if (typeof params === 'function') return { args: [], cb: params };
+    return { args: Array.isArray(params) ? params : [], cb: callback };
+}
+
+const db = {
+    run(query, params, callback) {
+        const { args, cb } = normArgs(params, callback);
+        client.execute({ sql: query, args: args })
+            .then(function (res) { if (cb) cb.call({ changes: res.rowsAffected }, null); })
+            .catch(function (err) { console.error('❌ DB run error:', err.message); if (cb) cb.call({ changes: 0 }, err); });
+    },
+    all(query, params, callback) {
+        const { args, cb } = normArgs(params, callback);
+        client.execute({ sql: query, args: args })
+            .then(function (res) { if (cb) cb(null, res.rows); })
+            .catch(function (err) { console.error('❌ DB all error:', err.message); if (cb) cb(err, []); });
+    },
+    get(query, params, callback) {
+        const { args, cb } = normArgs(params, callback);
+        client.execute({ sql: query, args: args })
+            .then(function (res) { if (cb) cb(null, res.rows[0]); })
+            .catch(function (err) { if (cb) cb(err, undefined); });
+    },
+    exec(sql, callback) {
+        client.executeMultiple(sql)
+            .then(function () { if (callback) callback(null); })
+            .catch(function (err) { if (callback) callback(err); });
+    },
+    close(cb) { if (cb) cb(null); }
+};
+
+client.execute('SELECT 1')
+    .then(function () { console.log('☁️ TURSO CLOUD DATABASE CONNECTED — VED ki memory ab PERMANENT!'); })
+    .catch(function (e) { console.error('❌ Turso connection fail:', e.message); });
 
 module.exports = db;
