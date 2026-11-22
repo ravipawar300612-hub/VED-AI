@@ -97,32 +97,148 @@
 <div class="app">
 
     <!-- ================= SIDEBAR ================= -->
-    <div class="sidebar">
-        <div class="sb-header">
-            <img src="logo.png" class="logo" alt="VED Logo">
-            <span class="sb-wordmark">VED AI</span>
-            <button id="wakeWordToggleBtn" class="sb-collapse-btn" type="button" aria-label="Toggle Hey VED wake word" title="Hey VED — hands-free voice">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/>
-                </svg>
-            </button>
-            <a href="login.html" class="sb-collapse-btn" aria-label="Login" style="text-decoration:none;">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>
-                </svg>
-            </a>
-            <button id="sidebarCollapseBtn" class="sb-collapse-btn" type="button" aria-label="Collapse sidebar">&#10094;</button>
+  <!-- ═══════════════════════════════════════════════
+     ✨ LIBRARY 2.0 — PREMIUM PINTEREST SIDEBAR
+     Founder: Sayali P. R. Pawar
+═══════════════════════════════════════════════ -->
+<div class="sidebar v2">
+    <div class="sb-header-v2">
+        <div class="sb-brand">
+            <img src="logo.png" class="sb-logo" alt="VED">
+            <div class="sb-brand-text">
+                <span class="sb-wordmark">VED</span>
+                <span class="sb-sub">by Sayali P. Pawar</span>
+            </div>
         </div>
-        <div class="sb-newchat-wrap">
-            <button id="newChatBtn" type="button" title="New chat"><span>+</span><span class="sb-btn-label">New chat</span></button>
-        </div>
-        <div class="sb-search-wrap">
-            <span class="sb-search-icon">&#128269;</span>
-            <input type="text" id="sidebarSearchInput" placeholder="Search conversations..." autocomplete="off">
-        </div>
-        <div id="sidebarGroups" class="sb-groups"></div>
-        <div class="sb-footer">Sayali P. R. Pawar</div>
+        <button id="sidebarCollapseBtn" class="sb-collapse-btn" type="button" aria-label="Collapse">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
     </div>
+
+    <div class="sb-newchat-wrap">
+        <button id="newChatBtn" type="button" class="sb-new-chat">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span>New chat</span>
+            <span class="sb-kbd">⌘K</span>
+        </button>
+    </div>
+
+    <div class="sb-search-wrap">
+        <svg class="sb-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="sidebarSearchInput" placeholder="Search chats..." autocomplete="off">
+    </div>
+
+    <!-- Pinned Section -->
+    <div class="sb-section" id="pinnedSection">
+        <div class="sb-section-title"><span class="sb-pin-dot"></span>Pinned</div>
+        <div id="pinnedChats" class="sb-list"></div>
+    </div>
+
+    <!-- Recent Section -->
+    <div class="sb-section" id="recentSection">
+        <div class="sb-section-title">Recent</div>
+        <div id="sidebarGroups" class="sb-list"></div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="sb-empty" id="sbEmpty">
+        <div class="sb-empty-orb"></div>
+        <div class="sb-empty-text">No chats yet</div>
+        <div class="sb-empty-hint">Start a conversation with VED ✨</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="sb-footer-v2">
+        <div class="sb-user">
+            <div class="sb-avatar">SP</div>
+            <div class="sb-user-info">
+                <div class="sb-user-name">Sayali Pawar</div>
+                <div class="sb-user-plan">Founder · Pro</div>
+            </div>
+        </div>
+        <a href="login.html" class="sb-settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </a>
+    </div>
+</div>
+
+<script>
+(function(){
+    document.addEventListener('click', function(e){
+        var t = e.target;
+        if(!t || !t.closest) return;
+        
+        var pinBtn = t.closest('.sb-pin-btn');
+        if(pinBtn){
+            e.stopPropagation();
+            var item = pinBtn.closest('.sb-chat-item');
+            if(!item) return;
+            item.classList.toggle('pinned');
+            pinBtn.classList.toggle('active');
+            var pinned = document.getElementById('pinnedChats');
+            var recent = document.getElementById('sidebarGroups');
+            if(item.classList.contains('pinned') && pinned) pinned.appendChild(item);
+            else if(recent) recent.appendChild(item);
+            updateEmptyState();
+            return;
+        }
+        
+        var delBtn = t.closest('.sb-del-btn');
+        if(delBtn){
+            e.stopPropagation();
+            var item = delBtn.closest('.sb-chat-item');
+            if(!item) return;
+            item.style.transform = 'translateX(-100%)';
+            item.style.opacity = '0';
+            setTimeout(function(){ item.remove(); updateEmptyState(); }, 300);
+            return;
+        }
+        
+        var renBtn = t.closest('.sb-ren-btn');
+        if(renBtn){
+            e.stopPropagation();
+            var item = renBtn.closest('.sb-chat-item');
+            if(!item) return;
+            var titleEl = item.querySelector('.sb-chat-title');
+            if(!titleEl) return;
+            var oldName = titleEl.textContent;
+            var newName = prompt('Rename chat:', oldName);
+            if(newName && newName.trim()) titleEl.textContent = newName.trim();
+            return;
+        }
+    }, true);
+    
+    function updateEmptyState(){
+        var empty = document.getElementById('sbEmpty');
+        var pinned = document.getElementById('pinnedChats');
+        var recent = document.getElementById('sidebarGroups');
+        if(!empty) return;
+        var hasPinned = pinned && pinned.children.length > 0;
+        var hasRecent = recent && recent.children.length > 0;
+        empty.style.display = (hasPinned || hasRecent) ? 'none' : 'flex';
+        var pSec = document.getElementById('pinnedSection');
+        if(pSec) pSec.style.display = hasPinned ? 'block' : 'none';
+    }
+    
+    setTimeout(function(){
+        var recent = document.getElementById('sidebarGroups');
+        if(!recent || recent.children.length > 0) return;
+        var samples = [
+            {title: 'Space facts discussion', time: '2m ago', icon: '🚀'},
+            {title: 'Marathi conversation', time: '1h ago', icon: '🗣️'},
+            {title: 'Photo analysis', time: '3h ago', icon: '📷'},
+            {title: 'Scam detection test', time: 'Yesterday', icon: '🛡️'}
+        ];
+        samples.forEach(function(s){
+            var item = document.createElement('div');
+            item.className = 'sb-chat-item';
+            item.innerHTML = '<div class="sb-chat-icon">'+s.icon+'</div><div class="sb-chat-info"><div class="sb-chat-title">'+s.title+'</div><div class="sb-chat-time">'+s.time+'</div></div><div class="sb-chat-actions"><button class="sb-act-btn sb-pin-btn" title="Pin"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button><button class="sb-act-btn sb-ren-btn" title="Rename"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button><button class="sb-act-btn sb-del-btn" title="Delete"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>';
+            recent.appendChild(item);
+        });
+        updateEmptyState();
+    }, 800);
+})();
+</script>
 
     <!-- ================= MAIN ================= -->
     <div class="main">
