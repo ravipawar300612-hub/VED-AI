@@ -1,6 +1,6 @@
 /* ==========================================
-   VED AI — VOICE MODE
-   Dark / neon-blue / glassmorphism theme
+   VED AI — VOICE MODE v2 (AURORA + LIVING ORB)
+   Founder : Sayali P. R. Pawar
    ========================================== */
 
 :root {
@@ -9,33 +9,58 @@
     --ved-border: rgba(120, 170, 255, 0.18);
     --ved-cyan: #3ddcff;
     --ved-blue: #5b6ef5;
+    --ved-violet: #8b5cf6;
+    --ved-gold: #ffd166;
     --ved-text: #eaf1ff;
     --ved-muted: #7f8bab;
 }
 
-/* -------- Overlay -------- */
-
+/* -------- Overlay + Aurora Background -------- */
 #voiceOverlay {
     position: fixed;
     inset: 0;
     z-index: 999;
-
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-
-    background: radial-gradient(circle at 50% 35%, rgba(61, 220, 255, 0.08), transparent 60%),
-                rgba(4, 6, 12, 0.72);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-
+    background: rgba(4, 6, 12, 0.82);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
     opacity: 0;
     pointer-events: none;
     transform: scale(1.02);
     transition: opacity 0.35s ease, transform 0.35s ease;
-
     font-family: "Space Grotesk", "Inter", sans-serif;
+    overflow: hidden;
+}
+
+#voiceOverlay::before,
+#voiceOverlay::after {
+    content: "";
+    position: absolute;
+    width: 60vmax;
+    height: 60vmax;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.32;
+    pointer-events: none;
+}
+#voiceOverlay::before {
+    background: radial-gradient(circle, var(--ved-cyan), transparent 60%);
+    top: -20vmax;
+    left: -15vmax;
+    animation: auroraFloat 14s ease-in-out infinite alternate;
+}
+#voiceOverlay::after {
+    background: radial-gradient(circle, var(--ved-violet), transparent 60%);
+    bottom: -25vmax;
+    right: -15vmax;
+    animation: auroraFloat 18s ease-in-out infinite alternate-reverse;
+}
+@keyframes auroraFloat {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(8vmax, 6vmax) scale(1.15); }
 }
 
 #voiceOverlay.active {
@@ -44,70 +69,90 @@
     transform: scale(1);
 }
 
-/* -------- Exit button -------- */
-
+/* -------- Exit Button -------- */
 .voice-exit-btn {
     position: absolute;
     top: 28px;
     right: 28px;
-
     width: 46px;
     height: 46px;
     border-radius: 50%;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     background: var(--ved-glass);
     border: 1px solid var(--ved-border);
     color: var(--ved-text);
     font-size: 18px;
     cursor: pointer;
-
-    transition: background 0.2s ease, transform 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 6;
 }
-
 .voice-exit-btn:hover {
     background: rgba(120, 170, 255, 0.16);
-    transform: scale(1.06);
+    transform: scale(1.08) rotate(90deg);
+    box-shadow: 0 0 18px rgba(61, 220, 255, 0.35);
 }
 
-/* -------- Logo + name -------- */
-
+/* -------- Brand (Logo + Name) -------- */
 .voice-brand {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 36px;
+    margin-bottom: 34px;
+    z-index: 2;
 }
-
 .voice-brand img {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    box-shadow: 0 0 22px rgba(61, 220, 255, 0.35);
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    box-shadow: 0 0 24px rgba(61, 220, 255, 0.4);
     margin-bottom: 10px;
+    animation: logoGlow 3s ease-in-out infinite;
 }
-
+@keyframes logoGlow {
+    0%, 100% { box-shadow: 0 0 18px rgba(61, 220, 255, 0.3); }
+    50%      { box-shadow: 0 0 34px rgba(61, 220, 255, 0.6); }
+}
 .voice-brand .voice-name {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
     color: var(--ved-text);
     text-transform: uppercase;
+    background: linear-gradient(90deg, var(--ved-cyan), var(--ved-blue), var(--ved-violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-/* -------- Orb -------- */
+/* -------- Founder Stamp -------- */
+.ved-stamp {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ved-muted);
+    opacity: 0.85;
+    z-index: 2;
+    white-space: nowrap;
+}
+.ved-stamp::before { content: "✦ "; color: var(--ved-gold); }
+.ved-stamp::after  { content: " ✦"; color: var(--ved-gold); }
 
+/* -------- Living Orb -------- */
 .orb-wrap {
     position: relative;
-    width: 220px;
-    height: 220px;
+    width: 240px;
+    height: 240px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 34px;
+    margin-bottom: 32px;
+    z-index: 2;
 }
 
 .orb-ring {
@@ -118,118 +163,257 @@
 }
 
 .orb-core {
-    width: 108px;
-    height: 108px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, var(--ved-cyan), var(--ved-blue) 70%, #1a2350 100%);
+    background: radial-gradient(circle at 35% 30%, var(--ved-cyan), var(--ved-blue) 65%, #1a2350 100%);
     box-shadow: 0 0 40px rgba(61, 220, 255, 0.45), 0 0 90px rgba(91, 110, 245, 0.25);
     transition: box-shadow 0.4s ease, transform 0.4s ease;
+    position: relative;
+    z-index: 2;
+}
+.orb-core::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.35), transparent 55%);
 }
 
-/* States: idle (default) */
+/* Floating particles around orb */
+.orb-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.orb-particles span {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--ved-cyan);
+    opacity: 0.5;
+    animation: particleFloat 3.6s ease-in-out infinite;
+}
+.orb-particles span:nth-child(1) { left: 10%; top: 24%; animation-delay: 0s; }
+.orb-particles span:nth-child(2) { left: 86%; top: 18%; animation-delay: 0.6s; background: var(--ved-violet); }
+.orb-particles span:nth-child(3) { left: 78%; top: 78%; animation-delay: 1.2s; }
+.orb-particles span:nth-child(4) { left: 16%; top: 80%; animation-delay: 1.8s; background: var(--ved-gold); }
+.orb-particles span:nth-child(5) { left: 50%; top: 6%;  animation-delay: 2.4s; background: var(--ved-violet); }
+.orb-particles span:nth-child(6) { left: 46%; top: 94%; animation-delay: 3s; }
+@keyframes particleFloat {
+    0%, 100% { transform: translateY(0); opacity: 0.25; }
+    50%      { transform: translateY(-16px); opacity: 0.9; }
+}
 
+/* STATE: idle — saans leta orb */
 #voiceOverlay[data-state="idle"] .orb-core {
     animation: idleBreathe 3.2s ease-in-out infinite;
 }
-
 @keyframes idleBreathe {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.04); }
+    50%      { transform: scale(1.05); }
 }
 
-/* States: listening — expanding pulse rings */
-
+/* STATE: listening — pulse rings */
 #voiceOverlay[data-state="listening"] .orb-core {
     box-shadow: 0 0 55px rgba(61, 220, 255, 0.65), 0 0 120px rgba(91, 110, 245, 0.35);
+    animation: idleBreathe 1.4s ease-in-out infinite;
 }
-
 #voiceOverlay[data-state="listening"] .orb-ring {
     animation: ringPulse 1.8s ease-out infinite;
 }
-
 #voiceOverlay[data-state="listening"] .orb-ring:nth-child(2) { animation-delay: 0.4s; }
 #voiceOverlay[data-state="listening"] .orb-ring:nth-child(3) { animation-delay: 0.8s; }
-
 @keyframes ringPulse {
-    0%   { width: 108px; height: 108px; opacity: 0.55; }
-    100% { width: 240px; height: 240px; opacity: 0; }
+    0%   { width: 110px; height: 110px; opacity: 0.55; }
+    100% { width: 260px; height: 260px; opacity: 0; }
 }
 
-/* States: thinking — rotating gradient ring */
-
+/* STATE: thinking — conic spin */
 #voiceOverlay[data-state="thinking"] .orb-core {
     animation: thinkSpin 1.4s linear infinite;
-    background: conic-gradient(from 0deg, var(--ved-cyan), var(--ved-blue), var(--ved-cyan));
+    background: conic-gradient(from 0deg, var(--ved-cyan), var(--ved-blue), var(--ved-violet), var(--ved-cyan));
 }
-
 @keyframes thinkSpin {
     0%   { transform: rotate(0deg) scale(0.96); }
     100% { transform: rotate(360deg) scale(0.96); }
 }
 
-/* States: speaking — waveform replaces rings visually via bars below orb */
-
+/* STATE: speaking — glow heartbeat */
 #voiceOverlay[data-state="speaking"] .orb-core {
-    box-shadow: 0 0 60px rgba(61, 220, 255, 0.7), 0 0 130px rgba(91, 110, 245, 0.4);
+    box-shadow: 0 0 60px rgba(61, 220, 255, 0.7), 0 0 140px rgba(139, 92, 246, 0.45);
+    animation: speakPulse 0.9s ease-in-out infinite;
+}
+@keyframes speakPulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
 }
 
-/* -------- Waveform (used while listening + speaking) -------- */
-
+/* -------- Waveform -------- */
 .voice-waveform {
     display: flex;
     align-items: flex-end;
     gap: 5px;
-    height: 36px;
-    margin-bottom: 22px;
+    height: 40px;
+    margin-bottom: 20px;
     opacity: 0;
     transition: opacity 0.25s ease;
+    z-index: 2;
 }
-
-.voice-waveform.visible {
-    opacity: 1;
-}
-
+.voice-waveform.visible { opacity: 1; }
 .voice-waveform span {
     display: block;
     width: 4px;
     border-radius: 3px;
-    background: linear-gradient(180deg, var(--ved-cyan), var(--ved-blue));
+    background: linear-gradient(180deg, var(--ved-cyan), var(--ved-violet));
+    box-shadow: 0 0 8px rgba(61, 220, 255, 0.5);
     height: 6px;
     transition: height 0.09s ease;
 }
 
-/* -------- Status text -------- */
-
+/* -------- Status + Transcript -------- */
 .voice-status {
     font-size: 15px;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     color: var(--ved-muted);
     min-height: 20px;
+    z-index: 2;
 }
-
-#voiceOverlay[data-state="listening"] .voice-status { color: var(--ved-cyan); }
-#voiceOverlay[data-state="thinking"] .voice-status { color: var(--ved-blue); }
-#voiceOverlay[data-state="speaking"] .voice-status { color: var(--ved-text); }
-
-/* -------- Live transcript (optional, shows recognized text) -------- */
+#voiceOverlay[data-state="listening"] .voice-status { color: var(--ved-cyan); text-shadow: 0 0 12px rgba(61,220,255,0.5); }
+#voiceOverlay[data-state="thinking"]  .voice-status { color: var(--ved-blue); }
+#voiceOverlay[data-state="speaking"]  .voice-status { color: var(--ved-text); }
 
 .voice-transcript {
     max-width: 480px;
     text-align: center;
-    margin-top: 18px;
+    margin-top: 16px;
     padding: 0 20px;
     font-size: 14px;
     color: var(--ved-muted);
     min-height: 20px;
+    z-index: 2;
 }
 
-/* -------- Mic entry button glow (in normal chat UI) -------- */
+/* -------- Voice Studio (ChatGPT-style picker) -------- */
+.voice-studio-btn {
+    position: absolute;
+    top: 28px;
+    left: 28px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--ved-glass);
+    border: 1px solid var(--ved-border);
+    color: var(--ved-text);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    z-index: 6;
+}
+.voice-studio-btn:hover {
+    background: rgba(120, 170, 255, 0.16);
+    box-shadow: 0 0 16px rgba(61, 220, 255, 0.3);
+    transform: translateY(-2px);
+}
 
+.voice-studio-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(360px, 92vw);
+    background: rgba(10, 14, 26, 0.88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-left: 1px solid var(--ved-border);
+    padding: 26px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transform: translateX(105%);
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 7;
+}
+.voice-studio-drawer.open { transform: translateX(0); }
+
+.vs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ved-text);
+}
+.vs-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--ved-border);
+    color: var(--ved-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.vs-close:hover { color: var(--ved-text); border-color: var(--ved-cyan); }
+
+.vs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    overflow-y: auto;
+    padding-bottom: 10px;
+}
+
+.vs-card {
+    background: rgba(16, 22, 38, 0.6);
+    border: 1px solid var(--ved-border);
+    border-radius: 16px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.vs-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(61, 220, 255, 0.45);
+}
+.vs-card.selected {
+    border-color: var(--ved-cyan);
+    box-shadow: 0 0 18px rgba(61, 220, 255, 0.25), inset 0 0 12px rgba(61, 220, 255, 0.08);
+}
+.vs-card .vs-name {
+    font-size: 12.5px;
+    color: var(--ved-text);
+    text-align: center;
+    letter-spacing: 0.03em;
+}
+.vs-play {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--ved-cyan), var(--ved-blue));
+    color: #041018;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.vs-play:hover {
+    transform: scale(1.12);
+    box-shadow: 0 0 16px rgba(61, 220, 255, 0.5);
+}
+
+/* -------- Mic armed glow (chat UI) -------- */
 .mic-btn.voice-armed {
     box-shadow: 0 0 0 0 rgba(61, 220, 255, 0.5);
     animation: armedPulse 1.6s ease-in-out infinite;
 }
-
 @keyframes armedPulse {
     0%   { box-shadow: 0 0 0 0 rgba(61, 220, 255, 0.45); }
     70%  { box-shadow: 0 0 0 12px rgba(61, 220, 255, 0); }
@@ -237,8 +421,82 @@
 }
 
 /* -------- Responsive -------- */
-
 @media (max-width: 480px) {
-    .orb-wrap { width: 170px; height: 170px; }
-    .orb-core { width: 84px; height: 84px; }
+    .orb-wrap { width: 190px; height: 190px; }
+    .orb-core { width: 88px; height: 88px; }
+    .voice-studio-btn { top: 20px; left: 20px; padding: 8px 14px; }
+    .voice-exit-btn { top: 20px; right: 20px; }
+    @keyframes ringPulse {
+        0%   { width: 88px; height: 88px; opacity: 0.55; }
+        100% { width: 200px; height: 200px; opacity: 0; }
+    }
+}/* -------- BIG STOP BUTTON (ChatGPT-style) -------- */
+.voice-stop-btn {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 36px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 2px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 5;
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.25);
+}
+.voice-stop-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: translateX(-50%) translateY(20px) scale(1.05);
+    box-shadow: 0 0 45px rgba(239, 68, 68, 0.5);
+}
+.voice-stop-btn:active {
+    transform: translateX(-50%) translateY(20px) scale(0.96);
+}
+
+/* Sirf jab VED bol raha ho, tab STOP button dikhe */
+#voiceOverlay[data-state="speaking"] .voice-stop-btn {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(-50%) translateY(0);
+    animation: stopPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes stopPulse {
+    0%, 100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.3); }
+    50%      { box-shadow: 0 0 50px rgba(239, 68, 68, 0.65); }
+}
+
+.stop-icon {
+    font-size: 14px;
+    background: #ef4444;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+.stop-label {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+/* Founder stamp thoda upar shift jab stop button dikhe */
+#voiceOverlay[data-state="speaking"] .ved-stamp {
+    bottom: 24px;
+    opacity: 0.6;
+    transform: translateX(-50%) scale(0.9);
 }
