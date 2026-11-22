@@ -1,5 +1,5 @@
 // ==========================================
-// VED AI — SPEECH ENGINE v25 (LAUGH MIRROR: tu hasegi to VED bhi hansega)
+// VED AI — SPEECH ENGINE v26 (VOICE STUDIO READY + BULLETPROOF STABILITY)
 // Founder: Sayali P. R. Pawar
 // ==========================================
 const SpeechEngine = (function () {
@@ -22,11 +22,13 @@ const SpeechEngine = (function () {
     let chunkBuf = '';
     let chunkSent = 0;
     let apiFailed = false;
-    let mirrorMood = 'neutral'; // USER ka mood — VED mirror karega
+    let mirrorMood = 'neutral';
 
     const audioCache = new Map();
     const pendingFetch = new Map();
     const CACHE_MAX_SIZE = 50;
+
+    const VOICE_KEY = "ved_voice_pref";
 
     const EMOTION_RULES = {
         happy: /(great|amazing|wonderful|fantastic|awesome|excellent|brilliant|perfect|congrats|yay|wow|shandar|badhiya|zabardast|mast|kamaal|wah|khushi|mubarak|good news|🎉|✨|❤️|💯)/i,
@@ -43,7 +45,6 @@ const SpeechEngine = (function () {
         return 'neutral';
     }
 
-    // USER KI HASI PAKADNE WALA RADAR 😂
     function detectUserEmotion(text) {
         const t = String(text);
         if (/(haha|hehe|hihi|ho ho|ahaha|ha ha|haa ha|lol|lmao|😂|🤣)/i.test(t)) return 'laughing';
@@ -86,6 +87,19 @@ const SpeechEngine = (function () {
             .filter(function (s) { return s.length > 0; });
     }
 
+    // ---------- VOICE SELECTION (NEW!) ----------
+    function setVoice(voiceId) {
+        if (voiceId && typeof voiceId === 'string') {
+            activeVoice = voiceId;
+            localStorage.setItem(VOICE_KEY, voiceId);
+            console.log("[SpeechEngine] Voice set to:", voiceId);
+        }
+    }
+
+    function getVoice() {
+        return activeVoice || localStorage.getItem(VOICE_KEY) || 'gemini:Sulafat';
+    }
+
     // ---------- LISTENING ----------
     function startListening(callbacks) {
         callbacks = callbacks || {};
@@ -93,7 +107,7 @@ const SpeechEngine = (function () {
         currentCallbacks = callbacks;
         restartCount = 0;
         isExplicitlyStopped = false;
-        mirrorMood = 'neutral'; // nayi sunwai = naya mirror
+        mirrorMood = 'neutral';
         lastFinalTime = Date.now();
         attachHandlers();
         try { recognition.start(); }
@@ -115,7 +129,6 @@ const SpeechEngine = (function () {
                 if (event.results[i].isFinal) { finalText += tr; lastFinalTime = Date.now(); restartCount = 0; }
                 else interimText += tr;
             }
-            // LAUGH MIRROR: user ki hasi/mood pakdo
             if (finalText) {
                 const um = detectUserEmotion(finalText);
                 if (um) {
@@ -166,7 +179,7 @@ const SpeechEngine = (function () {
     // ---------- TTS FETCH ----------
     function fetchTTS(text, mood) {
         if (apiFailed) return Promise.reject(new Error("API blocked"));
-        const voice = activeVoice || localStorage.getItem('vedVoice') || 'gemini:Sulafat';
+        const voice = getVoice();
         const cacheKey = voice + '|' + mood + '|' + text;
         if (audioCache.has(cacheKey)) return Promise.resolve(audioCache.get(cacheKey));
         if (pendingFetch.has(cacheKey)) return pendingFetch.get(cacheKey);
@@ -220,7 +233,7 @@ const SpeechEngine = (function () {
             });
     }
 
-    // ---------- BROWSER FALLBACK (ANTI-JAM) ----------
+    // ---------- BROWSER FALLBACK ----------
     function browserSpeak(text, mood, cb) {
         cb = cb || {};
         mood = mood || 'neutral';
@@ -275,7 +288,6 @@ const SpeechEngine = (function () {
 
     function enqueueChunk(t) {
         let mood = detectMood(t);
-        // LAUGH MIRROR BLEND: user hasi thi to VED bhi hansega
         if (mirrorMood === 'laughing' && (mood === 'neutral' || mood === 'happy' || mood === 'playful')) {
             mood = 'laughing';
         } else if (mirrorMood !== 'neutral' && mood === 'neutral') {
@@ -296,7 +308,7 @@ const SpeechEngine = (function () {
         chunkBuf = '';
         chunkSent = 0;
         apiFailed = false;
-        activeVoice = localStorage.getItem('vedVoice') || 'gemini:Sulafat';
+        activeVoice = getVoice();
         utteranceId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
@@ -354,5 +366,16 @@ const SpeechEngine = (function () {
     }
     if ("speechSynthesis" in window) window.speechSynthesis.addEventListener("voiceschanged", pickBestVoice);
 
-    return { isSupported, startListening, stopListening, speak, speakStreamBegin, speakStreamPush, speakStreamEnd, cancelSpeaking };
+    return { 
+        isSupported: isSupported, 
+        startListening: startListening, 
+        stopListening: stopListening, 
+        speak: speak, 
+        speakStreamBegin: speakStreamBegin, 
+        speakStreamPush: speakStreamPush, 
+        speakStreamEnd: speakStreamEnd, 
+        cancelSpeaking: cancelSpeaking,
+        setVoice: setVoice,
+        getVoice: getVoice
+    };
 })();
